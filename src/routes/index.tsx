@@ -90,7 +90,10 @@ function Dashboard() {
                 {m.label}
               </p>
               <m.icon
-                className={cn("size-4 shrink-0", m.positive ? "text-mint" : "text-muted-foreground")}
+                className={cn(
+                  "size-4 shrink-0",
+                  m.positive ? "text-mint" : "text-muted-foreground",
+                )}
               />
             </div>
             <p

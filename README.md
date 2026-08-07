@@ -1,29 +1,141 @@
-# Welcome to your Lovable project
+# CodOps — Team Tasks & HR Analytics
 
-This project was built with [Lovable](https://lovable.dev).
+CodOps is a full-stack workspace for modern engineering orgs: a drag-and-drop
+task board backed by Supabase, plus portfolio, team and HR-evaluation analytics.
 
-## Build with Lovable
+Built with **TanStack Start** (SSR + file-based routing), **React 19**,
+**TypeScript** and **Tailwind CSS v4**, with **Supabase** (Postgres + Auth) as
+the data layer.
 
-Open your project in the [Lovable editor](https://lovable.dev) and keep building.
+## Features
 
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: connect the project to GitHub and every change made in Lovable is committed straight to your repository.
-- **Full ownership**: this code is yours. Push to your repository and your changes sync back into Lovable, ready for your next prompt.
+- **Dashboard** (`/`) — live throughput chart, project health and delivery metrics
+- **Kanban Board** (`/board`) — all tasks grouped by workflow state
+- **Task Board** (`/tasks`) — full CRUD task board with:
+  - drag-and-drop status updates (optimistic, persisted to Supabase)
+  - search and filters by project, team, assignee and priority
+  - create / edit / delete dialog with due-date picker
+- **Projects** (`/projects`) — portfolio view with progress and delivery risk
+- **Teams** (`/teams`) — rosters, leads and role assignments
+- **HR Analytics** (`/analytics`) — per-member on-time completion, throughput and overdue load
+- **Admin Controls** (`/admin`) — role governance and workspace policies
+- ⌘K command palette, dark/light theme, collapsible sidebar
 
-## Development
+## Tech stack
 
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+| Layer           | Technology                                                                              |
+| --------------- | --------------------------------------------------------------------------------------- |
+| Framework       | [TanStack Start](https://tanstack.com/start) (React 19, SSR, file-based routes)         |
+| Routing         | TanStack Router (`src/router.tsx`, generated `src/routeTree.gen.ts`)                    |
+| Data fetching   | TanStack Query + Supabase (`@supabase/supabase-js`)                                     |
+| Database        | Supabase (Postgres) — schema in `supabase/migrations/`                                  |
+| UI              | shadcn/ui-style components (`src/components/ui/`), Radix primitives, lucide-react icons |
+| Styling         | Tailwind CSS v4 (`src/styles.css`, oklch design tokens)                                 |
+| Charts          | Recharts                                                                                |
+| Drag & drop     | `@hello-pangea/dnd`                                                                     |     | Forms | react-hook-form, zod (available via `ui/form.tsx`) |
+| Package manager | [Bun](https://bun.sh) (`bun.lock`)                                                      |
+
+## Prerequisites
+
+- [Bun](https://bun.sh/docs/installation) ≥ 1.x
+- Node.js 20+ (for tooling that runs through `npx`)
+- A Supabase project (cloud or local via `supabase start`)
+
+## Getting started
 
 ```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
-npm run dev
+git clone https://github.com/umaisadeel/CodOps.git
+cd CodOps
+bun install
+bun run dev
 ```
 
-## Built with
+The app runs at the port printed by Vite (default `http://localhost:3000`).
 
-- TanStack Start
-- TypeScript
-- React
-- Tailwind CSS
+### Environment variables
+
+Copy `.env.example` to `.env` and fill in your Supabase credentials:
+
+| Variable                        | Required                  | Purpose                                                            |
+| ------------------------------- | ------------------------- | ------------------------------------------------------------------ |
+| `VITE_SUPABASE_URL`             | yes                       | Supabase project URL (client + SSR)                                |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | yes                       | Publishable (anon) key (client + SSR)                              |
+| `SUPABASE_URL`                  | optional                  | Fallback for SSR                                                   |
+| `SUPABASE_PUBLISHABLE_KEY`      | optional                  | Fallback for SSR                                                   |
+| `SUPABASE_SERVICE_ROLE_KEY`     | only for admin server ops | Service-role key for `client.server.ts` — never ship to the client |
+
+### Database setup
+
+The schema lives in `supabase/migrations/`. To apply it to a remote project:
+
+```sh
+supabase link --project-ref <your-project-ref>
+supabase db push
+```
+
+It creates:
+
+- Enums: `app_role`, `task_priority`, `task_status`, `project_status`
+- Tables: `profiles`, `teams`, `team_members`, `projects`, `tasks`
+- `updated_at` trigger, RLS with open workspace access, and seed data
+
+The typed Supabase client (`src/integrations/supabase/types.ts`) mirrors this
+schema. Regenerate it after schema changes with:
+
+```sh
+supabase gen types typescript --project-id <your-project-ref> > src/integrations/supabase/types.ts
+```
+
+## Scripts
+
+| Command           | Description                          |
+| ----------------- | ------------------------------------ |
+| `bun run dev`     | Start the Vite dev server (with SSR) |
+| `bun run build`   | Production build (client + SSR)      |
+| `bun run preview` | Preview the production build         |
+| `bun run lint`    | ESLint over the project              |
+| `bun run format`  | Prettier write over the project      |
+
+## Project structure
+
+```
+src/
+  components/          App components (sidebar, header, kanban, task board…)
+    ui/                shadcn/ui-style primitives
+    tasks/             Task board feature components
+  hooks/               Shared hooks
+  integrations/supabase/  Supabase clients, auth middleware, generated types
+  lib/                 Types, mock data, task API hooks, error handling
+  routes/              File-based routes (see src/routes/README.md)
+  router.tsx           TanStack Router setup
+  server.ts            SSR entry with catastrophic-error normalization
+  start.ts             TanStack Start instance (middleware, CSRF)
+  styles.css           Tailwind v4 entry + design tokens
+supabase/
+  config.toml          Supabase project config
+  migrations/          SQL schema + seed
+```
+
+> **Note on data sources:** the dashboard, kanban, projects, teams, analytics
+> and admin views currently render seeded **mock data** (`src/lib/mock-data.ts`),
+> while the **Task Board** (`/tasks`) reads and writes real Supabase tables via
+> `src/lib/tasks-api.ts`. See `projectstatus.md` for the migration roadmap.
+
+## SSR error handling
+
+`src/server.ts` wraps the TanStack Start server entry so that thrown errors
+(including ones swallowed by h3) render a friendly error page instead of a bare
+500, and `src/lib/error-capture.ts` preserves full stack traces for logs.
+
+## Deployment
+
+`bun run build` compiles the client to `dist/client/` and the SSR entry to
+`dist/server/server.js`, which exports a `fetch` handler. To run it as an HTTP
+server, build with a Nitro preset (`node-server`, `cloudflare-workers`, `vercel`,
+…) via `nitro` configuration, or host the `fetch` handler on a platform that
+supports it (e.g. Workers-style runtimes). Ensure the Supabase environment
+variables are set in the host environment.
+
+## License
+
+Private project. See repository owner for licensing questions.

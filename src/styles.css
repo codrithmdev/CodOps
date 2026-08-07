@@ -103,8 +103,8 @@
   --sidebar-accent-foreground: oklch(0.2101 0.0318 264.66);
   --sidebar-border: oklch(0.9 0.012 255.51);
   --sidebar-ring: oklch(0.5635 0.2408 260.82);
-  --shadow-glow: 0 0 0 1px oklch(0.5635 0.2408 260.82 / 0.35), 0 8px 28px -8px
-    oklch(0.5635 0.2408 260.82 / 0.55);
+  --shadow-glow:
+    0 0 0 1px oklch(0.5635 0.2408 260.82 / 0.35), 0 8px 28px -8px oklch(0.5635 0.2408 260.82 / 0.55);
   --gradient-brand: linear-gradient(
     135deg,
     oklch(0.5635 0.2408 260.82),
@@ -177,8 +177,16 @@
 
 @utility surface-grid {
   background-image:
-    linear-gradient(to right, color-mix(in oklab, var(--border) 60%, transparent) 1px, transparent 1px),
-    linear-gradient(to bottom, color-mix(in oklab, var(--border) 60%, transparent) 1px, transparent 1px);
+    linear-gradient(
+      to right,
+      color-mix(in oklab, var(--border) 60%, transparent) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      to bottom,
+      color-mix(in oklab, var(--border) 60%, transparent) 1px,
+      transparent 1px
+    );
   background-size: 44px 44px;
 }
 
@@ -194,4 +202,3 @@
     -webkit-font-smoothing: antialiased;
   }
 }
-

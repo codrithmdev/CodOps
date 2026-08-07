@@ -83,10 +83,7 @@ function ProjectsPage() {
 
               <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
                 <span>{team?.name}</span>
-                <span>
-                  Due{" "}
-                  {p.due_date ? new Date(p.due_date).toLocaleDateString() : "—"}
-                </span>
+                <span>Due {p.due_date ? new Date(p.due_date).toLocaleDateString() : "—"}</span>
                 <span className="text-destructive">{health?.overdue_tasks ?? 0} overdue</span>
               </div>
             </Card>

@@ -37,7 +37,6 @@ const nav: { title: string; url: string; icon: typeof LayoutDashboard; exact?: b
   { title: "Admin Controls", url: "/admin", icon: Settings2 },
 ];
 
-
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";

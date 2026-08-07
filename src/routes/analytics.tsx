@@ -81,10 +81,7 @@ function AnalyticsPage() {
                 />
                 <Bar dataKey="rate" radius={[8, 8, 0, 0]} maxBarSize={54}>
                   {chartData.map((d) => (
-                    <Cell
-                      key={d.name}
-                      fill={d.rate >= 85 ? "var(--mint)" : "var(--primary)"}
-                    />
+                    <Cell key={d.name} fill={d.rate >= 85 ? "var(--mint)" : "var(--primary)"} />
                   ))}
                 </Bar>
               </BarChart>

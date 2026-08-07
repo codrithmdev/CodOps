@@ -1,4 +1,4 @@
-// Mirrors the Supabase schema so components are wire-ready for Lovable Cloud.
+// Mirrors the Supabase schema (see src/integrations/supabase/types.ts).
 
 export type AppRole = "admin" | "lead" | "member";
 export type TaskPriority = "low" | "medium" | "high" | "critical";
