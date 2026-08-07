@@ -129,27 +129,21 @@ supabase/
 
 ## Deployment
 
-`npm run build` compiles the client to `dist/client/` and the SSR entry to
-`dist/server/server.js`, which exports a `fetch` handler.
+This app deploys to **Netlify** (SSR via Netlify Functions) backed by
+**Supabase**. The full step-by-step runbook is in [`DEPLOY.md`](./DEPLOY.md) —
+create the Supabase project, apply `supabase/migrations/`, add the two
+`VITE_*` env vars to Netlify, and import the GitHub repo. `netlify.toml`
+already wires the build, publish dir, and function entry point.
 
-**Recommended preset: `node-server`** — a self-contained Node HTTP server that
-runs on any Node 20+ host (VM, Docker, a bare `node dist/server/server.js`).
-Follow `npm run build` with `npx nitro build --preset node-server`; the output
-lands in `.nitro/` and is launched with `node .nitro/output/server/index.mjs`.
-
-**PaaS/serverless alternatives** (pick one, then document it):
-
-- **Vercel** — build with the `vercel` preset; Vercel auto-detects the output.
-- **Cloudflare Workers** — build with the `cloudflare-workers` preset and
-  `wrangler deploy`, an edge-optimized path suitable for the Workers runtime.
-
-Whichever preset is chosen, ensure the Supabase environment variables
-(`VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`) are set in the host
-environment, since the client-side data layer authenticates the browser's
-Supabase client and relies on row-level security.
-
-CI runs the full pipeline (`typecheck → lint → test → build`) on every push and
+`npm run build` compiles the client to `dist/client/` and the SSR handler to a
+Netlify Function; CI runs `typecheck → lint → test → build` on every push and
 PR via `.github/workflows/ci.yml`.
+
+**Fallback presets** — if you ever leave Netlify, the app also builds as a
+standalone Node server (`node-server` preset, `node dist/server/server.js`) and
+can target Vercel or Cloudflare Workers. Whichever host is chosen, set
+`VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` in the environment; the
+client-side data layer relies on Supabase RLS for security.
 
 ## License
 
