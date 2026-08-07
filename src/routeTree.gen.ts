@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AnalyticsRouteImport } from './routes/analytics'
 import { Route as BoardRouteImport } from './routes/board'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as ProjectsRouteImport } from './routes/projects'
 import { Route as TasksRouteImport } from './routes/tasks'
 import { Route as TeamsRouteImport } from './routes/teams'
@@ -37,6 +38,11 @@ const BoardRoute = BoardRouteImport.update({
   path: '/board',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProjectsRoute = ProjectsRouteImport.update({
   id: '/projects',
   path: '/projects',
@@ -58,6 +64,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRoute
   '/analytics': typeof AnalyticsRoute
   '/board': typeof BoardRoute
+  '/login': typeof LoginRoute
   '/projects': typeof ProjectsRoute
   '/tasks': typeof TasksRoute
   '/teams': typeof TeamsRoute
@@ -67,6 +74,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRoute
   '/analytics': typeof AnalyticsRoute
   '/board': typeof BoardRoute
+  '/login': typeof LoginRoute
   '/projects': typeof ProjectsRoute
   '/tasks': typeof TasksRoute
   '/teams': typeof TeamsRoute
@@ -77,6 +85,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRoute
   '/analytics': typeof AnalyticsRoute
   '/board': typeof BoardRoute
+  '/login': typeof LoginRoute
   '/projects': typeof ProjectsRoute
   '/tasks': typeof TasksRoute
   '/teams': typeof TeamsRoute
@@ -84,16 +93,31 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/admin' | '/analytics' | '/board' | '/projects' | '/tasks' | '/teams'
+    | '/'
+    | '/admin'
+    | '/analytics'
+    | '/board'
+    | '/login'
+    | '/projects'
+    | '/tasks'
+    | '/teams'
   fileRoutesByTo: FileRoutesByTo
   to:
-    '/' | '/admin' | '/analytics' | '/board' | '/projects' | '/tasks' | '/teams'
+    | '/'
+    | '/admin'
+    | '/analytics'
+    | '/board'
+    | '/login'
+    | '/projects'
+    | '/tasks'
+    | '/teams'
   id:
     | '__root__'
     | '/'
     | '/admin'
     | '/analytics'
     | '/board'
+    | '/login'
     | '/projects'
     | '/tasks'
     | '/teams'
@@ -104,6 +128,7 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRoute
   AnalyticsRoute: typeof AnalyticsRoute
   BoardRoute: typeof BoardRoute
+  LoginRoute: typeof LoginRoute
   ProjectsRoute: typeof ProjectsRoute
   TasksRoute: typeof TasksRoute
   TeamsRoute: typeof TeamsRoute
@@ -139,6 +164,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BoardRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/projects': {
       id: '/projects'
       path: '/projects'
@@ -168,6 +200,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRoute,
   AnalyticsRoute: AnalyticsRoute,
   BoardRoute: BoardRoute,
+  LoginRoute: LoginRoute,
   ProjectsRoute: ProjectsRoute,
   TasksRoute: TasksRoute,
   TeamsRoute: TeamsRoute,

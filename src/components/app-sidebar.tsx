@@ -24,7 +24,8 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { currentUser, initialsOf } from "@/lib/mock-data";
+import { initialsOf } from "@/lib/utils";
+import { useCurrentUser } from "@/lib/tasks-api";
 import { ROLE_LABEL } from "@/lib/types";
 
 const nav: { title: string; url: string; icon: typeof LayoutDashboard; exact?: boolean }[] = [
@@ -41,6 +42,11 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const pathname = useRouterState({ select: (r) => r.location.pathname });
+  const currentUser = useCurrentUser().data ?? null;
+
+  const name = currentUser?.full_name ?? "Workspace";
+  const role = currentUser?.role ?? "member";
+  const initials = initialsOf(name);
 
   const isActive = (url: string, exact?: boolean) =>
     exact ? pathname === url : pathname.startsWith(url);
@@ -101,13 +107,13 @@ export function AppSidebar() {
       <SidebarFooter className="border-t border-sidebar-border p-2">
         <div className="flex min-w-0 items-center gap-3 rounded-xl bg-sidebar-accent/60 p-2">
           <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary/20 text-xs font-bold text-primary">
-            {initialsOf(currentUser.full_name ?? currentUser.email)}
+            {initials}
           </div>
           {!collapsed && (
             <div className="min-w-0 flex-1">
-              <p className="truncate text-xs font-semibold">{currentUser.full_name}</p>
+              <p className="truncate text-xs font-semibold">{name}</p>
               <p className="truncate text-[10px] font-semibold tracking-wider text-mint">
-                {ROLE_LABEL[currentUser.role]}
+                {ROLE_LABEL[role]}
               </p>
             </div>
           )}

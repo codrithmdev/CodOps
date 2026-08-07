@@ -7,7 +7,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { projects, tasks, profiles } from "@/lib/mock-data";
+import { useProfiles, useProjects, useTasks } from "@/lib/tasks-api";
 
 export function CommandPalette({
   open,
@@ -16,6 +16,14 @@ export function CommandPalette({
   open: boolean;
   onOpenChange: (v: boolean) => void;
 }) {
+  const tasksQ = useTasks();
+  const projectsQ = useProjects();
+  const profilesQ = useProfiles();
+
+  const tasks = tasksQ.data ?? [];
+  const projects = projectsQ.data ?? [];
+  const profiles = profilesQ.data ?? [];
+
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange}>
       <CommandInput placeholder="Search tasks, projects and people…" />
@@ -33,7 +41,7 @@ export function CommandPalette({
         </CommandGroup>
         <CommandGroup heading="People">
           {profiles.map((p) => (
-            <CommandItem key={p.id}>{p.full_name}</CommandItem>
+            <CommandItem key={p.id}>{p.full_name ?? p.email}</CommandItem>
           ))}
         </CommandGroup>
       </CommandList>

@@ -4,10 +4,12 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useNavigate,
+  useRouterState,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { SidebarProvider } from "@/components/ui/sidebar";
@@ -15,6 +17,8 @@ import { Toaster } from "@/components/ui/sonner";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AppHeader } from "@/components/app-header";
 import { CommandPalette, useCommandPalette } from "@/components/command-palette";
+import { useCurrentUser } from "@/lib/tasks-api";
+import { cn } from "@/lib/utils";
 
 function NotFoundComponent() {
   return (
@@ -121,23 +125,45 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const { open, setOpen } = useCommandPalette();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const isAuthPage = pathname === "/login";
 
   return (
     <QueryClientProvider client={queryClient}>
       <SidebarProvider>
         <div className="flex min-h-screen w-full bg-background">
-          <AppSidebar />
+          {isAuthPage ? null : <AppSidebar />}
           <div className="flex min-w-0 flex-1 flex-col">
-            <AppHeader onCommand={() => setOpen(true)} />
-            <main className="min-w-0 flex-1 p-4 sm:p-6">
+            {isAuthPage ? null : <AppHeader onCommand={() => setOpen(true)} />}
+            <main className={cn("flex min-w-0 flex-1 flex-col p-4 sm:p-6", isAuthPage && "p-0")}>
               {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
               <Outlet />
+              <AuthGate />
             </main>
           </div>
         </div>
-        <CommandPalette open={open} onOpenChange={setOpen} />
+        {isAuthPage ? null : <CommandPalette open={open} onOpenChange={setOpen} />}
         <Toaster />
       </SidebarProvider>
     </QueryClientProvider>
   );
+}
+
+function AuthGate() {
+  const navigate = useNavigate();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { data: user, isPending } = useCurrentUser();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  useEffect(() => {
+    if (!mounted || isPending) return;
+    if (!user && pathname !== "/login") {
+      navigate({ to: "/login" });
+    } else if (user && pathname === "/login") {
+      navigate({ to: "/" });
+    }
+  }, [mounted, isPending, user, pathname, navigate]);
+
+  return null;
 }

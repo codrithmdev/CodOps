@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import { Bell, Moon, Plus, Search, Sun, ChevronDown, LogOut, User, Settings } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -12,7 +14,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { RolePill } from "@/components/role-pill";
-import { currentUser, initialsOf } from "@/lib/mock-data";
+import { initialsOf } from "@/lib/utils";
+import { useCurrentUser } from "@/lib/tasks-api";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 function useTheme() {
@@ -25,6 +29,20 @@ function useTheme() {
 
 export function AppHeader({ onCommand }: { onCommand: () => void }) {
   const { dark, toggle } = useTheme();
+  const navigate = useNavigate();
+  const qc = useQueryClient();
+  const currentUser = useCurrentUser().data ?? null;
+
+  const name = currentUser?.full_name ?? "Workspace";
+  const email = currentUser?.email ?? "Not signed in";
+  const role = currentUser?.role ?? "member";
+  const initials = initialsOf(name);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    qc.clear();
+    navigate({ to: "/login" });
+  };
 
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-background/80 backdrop-blur-xl">
@@ -51,7 +69,7 @@ export function AppHeader({ onCommand }: { onCommand: () => void }) {
             <span className="hidden sm:inline">New Task</span>
           </Button>
 
-          <RolePill role={currentUser.role} className="hidden lg:inline-flex" />
+          <RolePill role={role} className="hidden lg:inline-flex" />
 
           <Button variant="ghost" size="icon" className="size-9 rounded-xl" onClick={toggle}>
             {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
@@ -66,17 +84,15 @@ export function AppHeader({ onCommand }: { onCommand: () => void }) {
             <DropdownMenuTrigger asChild>
               <button className="flex items-center gap-2 rounded-xl border border-border px-1.5 py-1 transition-colors hover:border-primary/50">
                 <span className="grid size-7 place-items-center rounded-lg bg-primary/20 text-[11px] font-bold text-primary">
-                  {initialsOf(currentUser.full_name ?? currentUser.email)}
+                  {initials}
                 </span>
                 <ChevronDown className="hidden size-3.5 text-muted-foreground sm:block" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel className="flex flex-col">
-                <span>{currentUser.full_name}</span>
-                <span className="text-xs font-normal text-muted-foreground">
-                  {currentUser.email}
-                </span>
+                <span>{name}</span>
+                <span className="text-xs font-normal text-muted-foreground">{email}</span>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem>
@@ -86,7 +102,7 @@ export function AppHeader({ onCommand }: { onCommand: () => void }) {
                 <Settings className="size-4" /> Preferences
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-destructive">
+              <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
                 <LogOut className="size-4" /> Sign out
               </DropdownMenuItem>
             </DropdownMenuContent>

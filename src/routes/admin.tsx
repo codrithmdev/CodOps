@@ -4,8 +4,10 @@ import { ShieldCheck } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { RolePill } from "@/components/role-pill";
 import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
-import { initialsOf, profiles } from "@/lib/mock-data";
+import { initialsOf } from "@/lib/utils";
+import { useProfiles } from "@/lib/tasks-api";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -33,6 +35,9 @@ const policies = [
 ];
 
 function AdminPage() {
+  const profilesQ = useProfiles();
+  const profiles = profilesQ.data ?? [];
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -41,26 +46,45 @@ function AdminPage() {
         action={<RolePill role="admin" className="shrink-0" />}
       />
 
+      {profilesQ.isError && (
+        <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
+          Couldn't load members: {(profilesQ.error as Error).message}
+        </div>
+      )}
+
       <div className="grid gap-4 xl:grid-cols-2">
         <Card className="gap-0 rounded-2xl border-border bg-card p-5">
           <h2 className="text-sm font-bold tracking-tight">Member Roles</h2>
           <p className="text-xs text-muted-foreground">profiles.role</p>
           <div className="mt-5 space-y-3">
-            {profiles.map((p) => (
-              <div
-                key={p.id}
-                className="flex min-w-0 items-center gap-3 rounded-xl border border-border p-3"
-              >
-                <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/20 text-[10px] font-bold text-primary">
-                  {initialsOf(p.full_name ?? p.email)}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-xs font-semibold">{p.full_name}</p>
-                  <p className="truncate text-[10px] text-muted-foreground">{p.email}</p>
-                </div>
-                <RolePill role={p.role} />
-              </div>
-            ))}
+            {profilesQ.isLoading
+              ? [0, 1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    className="flex items-center gap-3 rounded-xl border border-border p-3"
+                  >
+                    <Skeleton className="size-8 rounded-lg" />
+                    <div className="flex-1 space-y-1.5">
+                      <Skeleton className="h-3 w-32" />
+                      <Skeleton className="h-3 w-24" />
+                    </div>
+                  </div>
+                ))
+              : profiles.map((p) => (
+                  <div
+                    key={p.id}
+                    className="flex min-w-0 items-center gap-3 rounded-xl border border-border p-3"
+                  >
+                    <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/20 text-[10px] font-bold text-primary">
+                      {initialsOf(p.full_name ?? p.email)}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs font-semibold">{p.full_name}</p>
+                      <p className="truncate text-[10px] text-muted-foreground">{p.email}</p>
+                    </div>
+                    <RolePill role={p.role} />
+                  </div>
+                ))}
           </div>
         </Card>
 
