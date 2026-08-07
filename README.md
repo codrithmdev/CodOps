@@ -130,11 +130,26 @@ supabase/
 ## Deployment
 
 `npm run build` compiles the client to `dist/client/` and the SSR entry to
-`dist/server/server.js`, which exports a `fetch` handler. To run it as an HTTP
-server, build with a Nitro preset (`node-server`, `cloudflare-workers`, `vercel`,
-…) via `nitro` configuration, or host the `fetch` handler on a platform that
-supports it (e.g. Workers-style runtimes). Ensure the Supabase environment
-variables are set in the host environment.
+`dist/server/server.js`, which exports a `fetch` handler.
+
+**Recommended preset: `node-server`** — a self-contained Node HTTP server that
+runs on any Node 20+ host (VM, Docker, a bare `node dist/server/server.js`).
+Follow `npm run build` with `npx nitro build --preset node-server`; the output
+lands in `.nitro/` and is launched with `node .nitro/output/server/index.mjs`.
+
+**PaaS/serverless alternatives** (pick one, then document it):
+
+- **Vercel** — build with the `vercel` preset; Vercel auto-detects the output.
+- **Cloudflare Workers** — build with the `cloudflare-workers` preset and
+  `wrangler deploy`, an edge-optimized path suitable for the Workers runtime.
+
+Whichever preset is chosen, ensure the Supabase environment variables
+(`VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`) are set in the host
+environment, since the client-side data layer authenticates the browser's
+Supabase client and relies on row-level security.
+
+CI runs the full pipeline (`typecheck → lint → test → build`) on every push and
+PR via `.github/workflows/ci.yml`.
 
 ## License
 

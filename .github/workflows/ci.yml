@@ -6,8 +6,10 @@ on:
   pull_request:
 
 jobs:
-  quality:
+  validate:
+    name: Validate (typecheck → lint → test → build)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -32,3 +34,6 @@ jobs:
 
       - name: Build
         run: npm run build
+        env:
+          VITE_SUPABASE_URL: https://example.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: dummy-placeholder-for-build

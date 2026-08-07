@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { initialsOf } from "@/lib/utils";
-import { useProfiles } from "@/lib/tasks-api";
+import { useCurrentUser, useProfiles } from "@/lib/tasks-api";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -35,8 +35,38 @@ const policies = [
 ];
 
 function AdminPage() {
+  const currentUserQ = useCurrentUser();
   const profilesQ = useProfiles();
   const profiles = profilesQ.data ?? [];
+
+  if (currentUserQ.isPending) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title="Admin Controls"
+          subtitle="Role assignment and workspace policy governance."
+        />
+        <Skeleton className="h-40 rounded-2xl" />
+      </div>
+    );
+  }
+
+  const isAdmin = currentUserQ.data?.role === "admin";
+  if (!isAdmin) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <div className="max-w-md text-center">
+          <ShieldCheck className="mx-auto size-10 text-muted-foreground" />
+          <h1 className="mt-4 text-xl font-semibold tracking-tight text-foreground">
+            Admin access only
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            This page is restricted to workspace admins. Contact an admin to be granted access.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

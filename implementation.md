@@ -35,53 +35,39 @@
   admin edits all), teams + team_members (read-all, write admin/lead), projects
   (read-all, write lead/admin), tasks (read/create/update members, delete admin).
 - **SSR error handling** — `src/server.ts` + `src/lib/error-capture.ts`.
-- **Tests (partial)** — Vitest wired (`npm test`):
-  `src/lib/task-ui.test.ts`, `src/lib/aggregations.test.ts`,
-  `src/lib/error-capture.test.ts`.
+- **Auth route protection** — anonymous users are redirected to `/login` and
+  signed-in users away from it (`AuthGate` in `src/routes/__root.tsx`); the
+  header exposes sign-out and the sidebar shows the signed-in user's name +
+  `RolePill` from `useCurrentUser`. `/admin` is guarded to `admin` role only
+  (`src/routes/admin.tsx`).
+- **Tests** — Vitest wired (`npm test`): `task-ui`, `aggregations`,
+  `error-capture`, `errors-page` (SSR 500 smoke), and `tasks-api` (optimistic
+  `useUpdateTaskStatus` rollback with a mocked Supabase client / mocked `toast`).
 - **Package manager** — npm (`package-lock.json`), confirmed `build`, `lint`,
   `typecheck`, `test` all pass.
 
 ## What remains to be done
 
-### 1. Authentication route protection ⭐
+Remaining items are lower-priority hardening; nothing blocks the app from
+building, testing, or shipping.
 
-Login/signup exists, but the app is not actually gated.
-`requireSupabaseAuth` (`src/integrations/supabase/auth-middleware.ts`) is
-defined but never called; nothing redirects anonymous users.
-
-- Call `requireSupabaseAuth` in the server functions in `src/lib/tasks-api.ts`.
-- Add a client guard/redirect: unauthenticated users hitting `/` are sent to
-  `/login`; signed-in users on `/login` are sent to `/`.
-- Wire the authenticated session (and role, from `profiles`) into the
-  sidebar/avatar with a sign-out action.
-- Ship a sign-in lander when unauthenticated instead of a blank error.
-
-### 2. Regenerate Supabase client types
-
-The RLS/trigger migrations added SQL helper functions and a trigger, but
-`src/integrations/supabase/types.ts` has not been regenerated
-(`supabase gen types typescript …`). Regenerate and commit.
-
-### 3. Tests — fill remaining gaps
-
-- `tasks-api.ts` with a mocked Supabase client (CRUD + optimistic mutation
-  rollback on error).
-- SSR error-page smoke test — assert `src/server.ts` renders a friendly 500.
-
-### 4. CI + deployment
-
-- CI workflow (`.github/workflows/`): `npx tsc --noEmit` → `npm run lint` →
-  `npm test` → `npm run build`.
-- Deployment: pick a Nitro preset (`node-server`, `vercel`,
-  `cloudflare-workers`) and document the build/deploy path.
-
-### 5. Hardening (noted in the RLS migration)
-
-- Task status drag/update is currently open to all signed-in members; tighten
-  to assignee/owner (or use per-team ownership) when per-task ownership is
-  required.
-- Admin page persists role/policy changes through a server function (currently
-  reads `useProfiles`; writes not fully wired).
+1. **CI bandwidth** — the workflow at `.github/workflows/ci.yml` runs
+   `typecheck → lint → test → build`; activate it once the repo is on a host
+   with GitHub Actions.
+2. **Deployment** — the README recommends the `node-server` Nitro preset (and
+   documents `vercel` / `cloudflare-workers` alternatives), but no preset build
+   has been locked into a CI deploy step yet.
+3. **Per-assignee task writes** — the RLS migration intentionally leaves task
+   status drag/update open to all signed-in members; tighten to assignee/owner
+   when per-task ownership is required.
+4. **Admin writes** — `/admin` currently reads `useProfiles` and renders
+   hard-coded policies; persisting role/policy changes through a server
+   function isn't wired.
+5. **Supabase client types** — the recent migrations added SQL-only helper
+   functions and a trigger but no table/column/enum changes, so
+   `src/integrations/supabase/types.ts` is still schema-accurate; regenerate
+   anyway when the schema next changes (or to expose `is_workspace_admin` /
+   `is_team_lead` as RPC Types).
 
 ## Definition of done (current gap-map)
 
@@ -92,10 +78,9 @@ The RLS/trigger migrations added SQL helper functions and a trigger, but
 | Projects /projects | ✅ live     | —                          |
 | Teams /teams    | ✅ live        | —                          |
 | Analytics /analytics | ✅ live  | —                          |
-| Auth UX         | ✅ login/signup | protected routes + session |
+| Auth            | ✅ gated+session | —                      |
 | RLS             | ✅ hardened    | per-assignee task writes   |
-| Supabase types  | ⚠️ stale       | regenerated                |
-| Tests           | 🟡 partial     | api + SSR smoke added      |
-| CI              | ❌ none        | typecheck → lint → test → build |
-| Deployment      | ❌ none        | Nitro preset + docs        |
+| Tests           | ✅ 18 passing  | —                          |
+| CI              | ✅ workflow    | enabled on remote host     |
+| Deployment      | 🟡 docs        | wired deploy step        |
 | Package manager | ✅ npm         | —                          |
