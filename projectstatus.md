@@ -85,10 +85,10 @@ Browser ⇄ TanStack Start (SSR) ⇄ Supabase (Postgres + Auth)
 ## How to verify the app works
 
 ```sh
-bun install          # first time
-bun run dev          # dev server (SSR)
+npm install          # first time
+npm run dev          # dev server (SSR)
 # open the printed URL, browse /tasks — CRUD + drag-and-drop hit Supabase
-bun run build        # production build sanity check
-bun run lint         # lint
+npm run build        # production build sanity check
+npm run lint         # lint
 npx tsc --noEmit     # typecheck
 ```

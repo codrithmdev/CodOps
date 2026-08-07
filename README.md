@@ -33,12 +33,12 @@ the data layer.
 | Styling         | Tailwind CSS v4 (`src/styles.css`, oklch design tokens)                                 |
 | Charts          | Recharts                                                                                |
 | Drag & drop     | `@hello-pangea/dnd`                                                                     |     | Forms | react-hook-form, zod (available via `ui/form.tsx`) |
-| Package manager | [Bun](https://bun.sh) (`bun.lock`)                                                      |
+| Package manager | [npm](https://www.npmjs.com) (`package-lock.json`)                                        |
 
 ## Prerequisites
 
-- [Bun](https://bun.sh/docs/installation) ≥ 1.x
-- Node.js 20+ (for tooling that runs through `npx`)
+- [Node.js](https://nodejs.org) 20+
+- npm (bundled with Node.js)
 - A Supabase project (cloud or local via `supabase start`)
 
 ## Getting started
@@ -46,8 +46,8 @@ the data layer.
 ```sh
 git clone https://github.com/umaisadeel/CodOps.git
 cd CodOps
-bun install
-bun run dev
+npm install
+npm run dev
 ```
 
 The app runs at the port printed by Vite (default `http://localhost:3000`).
@@ -90,11 +90,11 @@ supabase gen types typescript --project-id <your-project-ref> > src/integrations
 
 | Command           | Description                          |
 | ----------------- | ------------------------------------ |
-| `bun run dev`     | Start the Vite dev server (with SSR) |
-| `bun run build`   | Production build (client + SSR)      |
-| `bun run preview` | Preview the production build         |
-| `bun run lint`    | ESLint over the project              |
-| `bun run format`  | Prettier write over the project      |
+| `npm run dev`     | Start the Vite dev server (with SSR) |
+| `npm run build`   | Production build (client + SSR)      |
+| `npm run preview` | Preview the production build         |
+| `npm run lint`    | ESLint over the project              |
+| `npm run format`  | Prettier write over the project      |
 
 ## Project structure
 
@@ -129,7 +129,7 @@ supabase/
 
 ## Deployment
 
-`bun run build` compiles the client to `dist/client/` and the SSR entry to
+`npm run build` compiles the client to `dist/client/` and the SSR entry to
 `dist/server/server.js`, which exports a `fetch` handler. To run it as an HTTP
 server, build with a Nitro preset (`node-server`, `cloudflare-workers`, `vercel`,
 …) via `nitro` configuration, or host the `fetch` handler on a platform that

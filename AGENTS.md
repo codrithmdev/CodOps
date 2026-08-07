@@ -7,15 +7,15 @@ Guidance for AI coding agents and contributors working in this repository.
 - **TanStack Start** (React 19, SSR, file-based routing in `src/routes/`)
 - **TypeScript** (strict) + **Tailwind CSS v4** (`src/styles.css`)
 - **Supabase** (Postgres + Auth) via `@supabase/supabase-js`
-- **Bun** is the package manager — commit `bun.lock`, not a `package-lock.json`
+- **npm** is the package manager — commit `package-lock.json`
 
 ## Commands
 
 ```sh
-bun run dev       # dev server (SSR)
-bun run build     # production build
-bun run lint      # ESLint (project-configured)
-bun run format    # Prettier write
+npm run dev       # dev server (SSR)
+npm run build     # production build
+npm run lint      # ESLint (project-configured)
+npm run format    # Prettier write
 npx tsc --noEmit  # typecheck
 ```
 
