@@ -1,0 +1,87 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { ShieldCheck } from "lucide-react";
+
+import { PageHeader } from "@/components/page-header";
+import { RolePill } from "@/components/role-pill";
+import { Card } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { initialsOf, profiles } from "@/lib/mock-data";
+
+export const Route = createFileRoute("/admin")({
+  head: () => ({
+    meta: [
+      { title: "Admin Controls — CodOps" },
+      {
+        name: "description",
+        content: "Manage member roles, workspace policies and evaluation cycle settings.",
+      },
+      { property: "og:title", content: "Admin Controls — CodOps" },
+      {
+        property: "og:description",
+        content: "Manage roles, workspace policies and evaluation cycles.",
+      },
+    ],
+  }),
+  component: AdminPage,
+});
+
+const policies = [
+  { label: "Require lead approval on task completion", on: true },
+  { label: "Auto-archive completed projects after 30 days", on: false },
+  { label: "Publish quarterly evaluation scores to members", on: true },
+  { label: "Enforce SSO for all workspace members", on: true },
+];
+
+function AdminPage() {
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title="Admin Controls"
+        subtitle="Role assignment and workspace policy governance."
+        action={<RolePill role="admin" className="shrink-0" />}
+      />
+
+      <div className="grid gap-4 xl:grid-cols-2">
+        <Card className="gap-0 rounded-2xl border-border bg-card p-5">
+          <h2 className="text-sm font-bold tracking-tight">Member Roles</h2>
+          <p className="text-xs text-muted-foreground">profiles.role</p>
+          <div className="mt-5 space-y-3">
+            {profiles.map((p) => (
+              <div
+                key={p.id}
+                className="flex min-w-0 items-center gap-3 rounded-xl border border-border p-3"
+              >
+                <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/20 text-[10px] font-bold text-primary">
+                  {initialsOf(p.full_name ?? p.email)}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-xs font-semibold">{p.full_name}</p>
+                  <p className="truncate text-[10px] text-muted-foreground">{p.email}</p>
+                </div>
+                <RolePill role={p.role} />
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        <Card className="gap-0 rounded-2xl border-border bg-card p-5">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="size-4 text-mint" />
+            <h2 className="text-sm font-bold tracking-tight">Workspace Policies</h2>
+          </div>
+          <div className="mt-5 space-y-1">
+            {policies.map((p) => (
+              <label
+                key={p.label}
+                className="flex min-w-0 cursor-pointer items-center justify-between gap-4 rounded-xl px-2 py-3 transition-colors hover:bg-muted/50"
+              >
+                <span className="min-w-0 text-xs">{p.label}</span>
+                <Switch defaultChecked={p.on} className="shrink-0" />
+              </label>
+            ))}
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+}
