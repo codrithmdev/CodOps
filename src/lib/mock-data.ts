@@ -8,6 +8,8 @@ import type {
   TeamMember,
 } from "./types";
 
+export { initialsOf } from "./utils";
+
 const iso = (d: string) => new Date(d).toISOString();
 
 export const currentUser: Profile = {
@@ -257,11 +259,3 @@ export const throughputSeries = [
 
 export const nameOf = (id: string | null) =>
   profiles.find((p) => p.id === id)?.full_name ?? "Unassigned";
-
-export const initialsOf = (name: string) =>
-  name
-    .split(" ")
-    .map((n) => n[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();

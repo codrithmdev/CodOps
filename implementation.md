@@ -38,16 +38,17 @@ can proceed in any order.
 Only `/tasks` talks to Supabase. Every other view reads
 `src/lib/mock-data.ts`.
 
-| Route           | Mock source used                                | Needs |
-| --------------- | ----------------------------------------------- | ----- |
-| `/` (dashboard) | `projectHealth`, `throughputSeries`             | Metrics computed from tasks; real throughput; project health from `projects`+`tasks` |
-| `/board`        | `tasks`/`projects` via `kanban-board.tsx`       | `useTasks` + `useProjects`; wire drag-and-drop (reuse `useUpdateTaskStatus`) |
-| `/projects`     | `projects`, `projectHealth`, `teams`            | `useProjects` + `useTeams`; aggregate health per project |
-| `/teams`        | `teams`, `teamMembers`, `profiles`              | `useTeams` + `useProfiles`; join membership via new query |
-| `/analytics`    | `individualPerformance`                         | New aggregate query/view over `tasks` per assignee |
-| `/admin`        | `profiles` + hard-coded policies                | `useProfiles`; persist role/policy changes |
+| Route           | Mock source used                          | Needs                                                                                |
+| --------------- | ----------------------------------------- | ------------------------------------------------------------------------------------ |
+| `/` (dashboard) | `projectHealth`, `throughputSeries`       | Metrics computed from tasks; real throughput; project health from `projects`+`tasks` |
+| `/board`        | `tasks`/`projects` via `kanban-board.tsx` | `useTasks` + `useProjects`; wire drag-and-drop (reuse `useUpdateTaskStatus`)         |
+| `/projects`     | `projects`, `projectHealth`, `teams`      | `useProjects` + `useTeams`; aggregate health per project                             |
+| `/teams`        | `teams`, `teamMembers`, `profiles`        | `useTeams` + `useProfiles`; join membership via new query                            |
+| `/analytics`    | `individualPerformance`                   | New aggregate query/view over `tasks` per assignee                                   |
+| `/admin`        | `profiles` + hard-coded policies          | `useProfiles`; persist role/policy changes                                           |
 
 Actions:
+
 - Add missing TanStack Query hooks to `src/lib/tasks-api.ts`:
   - `useTeamMembers()` (join `team_members` → `profiles`).
   - `useProjectHealth()` — either a Supabase RPC/view or client aggregation.
@@ -104,17 +105,17 @@ No pipeline runs typecheck → lint → build today.
 
 ## Definition of done (current gap-map)
 
-| Area | Today | Target |
-| ---- | ----- | ------ |
-| `/tasks` | ✅ live | — (verified) |
-| Dashboard `/` | ⚠️ mock | live metrics + chart |
-| Kanban `/board` | ⚠️ mock | live + draggable |
-| Projects `/projects` | ⚠️ mock | live |
-| Teams `/teams` | ⚠️ mock | live |
-| Analytics `/analytics` | ⚠️ mock | live (real eval model) |
-| Admin `/admin` | ⚠️ mock | live, role-aware |
-| Auth | 🟡 partial | login + protected routes |
-| RLS | ⚠️ open | role/ownership policies |
-| Tests | ❌ none | unit + SSR smoke |
-| CI | ❌ none | typecheck → lint → build |
-| Package manager | ✅ npm | — |
+| Area                   | Today      | Target                   |
+| ---------------------- | ---------- | ------------------------ |
+| `/tasks`               | ✅ live    | — (verified)             |
+| Dashboard `/`          | ⚠️ mock    | live metrics + chart     |
+| Kanban `/board`        | ⚠️ mock    | live + draggable         |
+| Projects `/projects`   | ⚠️ mock    | live                     |
+| Teams `/teams`         | ⚠️ mock    | live                     |
+| Analytics `/analytics` | ⚠️ mock    | live (real eval model)   |
+| Admin `/admin`         | ⚠️ mock    | live, role-aware         |
+| Auth                   | 🟡 partial | login + protected routes |
+| RLS                    | ⚠️ open    | role/ownership policies  |
+| Tests                  | ❌ none    | unit + SSR smoke         |
+| CI                     | ❌ none    | typecheck → lint → build |
+| Package manager        | ✅ npm     | —                        |

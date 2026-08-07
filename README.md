@@ -33,7 +33,7 @@ the data layer.
 | Styling         | Tailwind CSS v4 (`src/styles.css`, oklch design tokens)                                 |
 | Charts          | Recharts                                                                                |
 | Drag & drop     | `@hello-pangea/dnd`                                                                     |     | Forms | react-hook-form, zod (available via `ui/form.tsx`) |
-| Package manager | [npm](https://www.npmjs.com) (`package-lock.json`)                                        |
+| Package manager | [npm](https://www.npmjs.com) (`package-lock.json`)                                      |
 
 ## Prerequisites
 
