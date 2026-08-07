@@ -1,121 +1,101 @@
 # Implementation — CodOps
 
 > Concrete implementation plan for CodOps — Team Tasks & HR Analytics.
-> This file is the working runbook for turning the current mock-data UI into a
-> fully wired, production-shaped app. Companion status tracked in
-> `projectstatus.md`; live state/schema in `README.md`.
+> This file is the working runbook for getting the app to a fully wired,
+> production-shaped state. Companion status tracked in `projectstatus.md`; live
+> state/schema in `README.md`.
 
 ## What is already implemented ✅
 
 - **App shell** — collapsible sidebar, header, ⌘K command palette, dark/light
   theming (`src/components/app-*.tsx`, `src/routes/__root.tsx`).
-- **Task Board** (`/tasks`) — only route wired to Supabase. Live CRUD via
-  TanStack Query hooks (`src/lib/tasks-api.ts`): `useTasks`, `useProjects`,
-  `useProfiles`, `useTeams`, `useSaveTask`, `useUpdateTaskStatus`,
-  `useDeleteTask`. Optimistic drag-and-drop status updates, filters, task dialog
-  (`src/components/tasks/`).
-- **App shell pages** (UI complete, rendering mock data):
-  - Dashboard `/`
-  - Kanban Board `/board`
-  - Projects `/projects`
-  - Teams `/teams`
-  - HR Analytics `/analytics`
-  - Admin `/admin`
-- **Supabase schema + seed** — `supabase/migrations/*.sql`: 4 enums, 5 tables,
-  `set_updated_at` trigger, RLS, 12-task seed.
+- **UI component cleanup** — removed 27 unused shadcn/ui primitives
+  (`src/components/ui/*`); dropped 20 now-dangling deps from `package.json`
+  (16 `@radix-ui/react-*`, `embla-carousel-react`, `input-otp`,
+  `react-resizable-panels`, `vaul`). `recharts` kept — still used by
+  `/analytics` and `/` charts. Remaining primitives are all referenced.
+- **Data layer wired to Supabase** — no route reads `mock-data.ts` (the file is
+  deleted). All views use TanStack Query hooks in `src/lib/tasks-api.ts`:
+  `useTasks`, `useProjects`, `useProfiles`, `useTeams`, `useTeamMembers`,
+  `useProjectHealth`, `useThroughput`, `useIndividualPerformance`,
+  `useDashboardMetrics`, `useSaveTask`, `useUpdateTaskStatus`, `useDeleteTask`,
+  `useCurrentUser`. Optimistic drag-and-drop status updates, filters, task
+  dialog (`src/components/tasks/`, `src/components/kanban-board.tsx`).
+- **App pages (live)**: Dashboard `/`, Kanban Board `/board`, Projects
+  `/projects`, Teams `/teams`, HR Analytics `/analytics`.
+- **Auth UX** — sign-in / sign-up UI at `/login`
+  (`src/routes/login.tsx`, email/password + full name).
+- **Schema + seed** — `supabase/migrations/*.sql`: 4 enums, 5 tables,
+  `set_updated_at` trigger, 12-task seed.
+- **Auth ↔ profiles** — `handle_new_user()` trigger creates a `profiles` row
+  keyed by the auth user id on sign-up, so `useCurrentUser` resolves.
+- **Hardened RLS** — `20260807170000_harden_rls.sql` drops all `anon`
+  privileges and gates `authenticated` access by role/team via
+  `is_workspace_admin()` / `is_team_lead()`: profiles (read roster / edit self,
+  admin edits all), teams + team_members (read-all, write admin/lead), projects
+  (read-all, write lead/admin), tasks (read/create/update members, delete admin).
 - **SSR error handling** — `src/server.ts` + `src/lib/error-capture.ts`.
+- **Tests (partial)** — Vitest wired (`npm test`):
+  `src/lib/task-ui.test.ts`, `src/lib/aggregations.test.ts`,
+  `src/lib/error-capture.test.ts`.
 - **Package manager** — npm (`package-lock.json`), confirmed `build`, `lint`,
-  `typecheck` all pass.
+  `typecheck`, `test` all pass.
 
 ## What remains to be done
 
-Remaining work is grouped into five workstreams. They are roughly ordered by
-dependency (data layer before features before hardening), but workstreams 3–5
-can proceed in any order.
+### 1. Authentication route protection ⭐
 
-### 1. Port the mock-data views to Supabase
+Login/signup exists, but the app is not actually gated.
+`requireSupabaseAuth` (`src/integrations/supabase/auth-middleware.ts`) is
+defined but never called; nothing redirects anonymous users.
 
-Only `/tasks` talks to Supabase. Every other view reads
-`src/lib/mock-data.ts`.
-
-| Route           | Mock source used                          | Needs                                                                                |
-| --------------- | ----------------------------------------- | ------------------------------------------------------------------------------------ |
-| `/` (dashboard) | `projectHealth`, `throughputSeries`       | Metrics computed from tasks; real throughput; project health from `projects`+`tasks` |
-| `/board`        | `tasks`/`projects` via `kanban-board.tsx` | `useTasks` + `useProjects`; wire drag-and-drop (reuse `useUpdateTaskStatus`)         |
-| `/projects`     | `projects`, `projectHealth`, `teams`      | `useProjects` + `useTeams`; aggregate health per project                             |
-| `/teams`        | `teams`, `teamMembers`, `profiles`        | `useTeams` + `useProfiles`; join membership via new query                            |
-| `/analytics`    | `individualPerformance`                   | New aggregate query/view over `tasks` per assignee                                   |
-| `/admin`        | `profiles` + hard-coded policies          | `useProfiles`; persist role/policy changes                                           |
-
-Actions:
-
-- Add missing TanStack Query hooks to `src/lib/tasks-api.ts`:
-  - `useTeamMembers()` (join `team_members` → `profiles`).
-  - `useProjectHealth()` — either a Supabase RPC/view or client aggregation.
-  - `useThroughput()` — created vs completed per week (client aggregation over
-    `tasks`, or a SQL view).
-  - `useIndividualPerformance()` — per-assignee on-time %, throughput, overdue
-    (aggregate over `tasks`).
-- Create reusable loading skeletons + empty states for every data-driven view
-  (adds to the `ui/skeleton` usage). The `recharts` charts need fallbacks while
-  their series are empty.
-- Retire `src/lib/mock-data.ts` once no route references it. Keep `initialsOf`
-  / `nameOf` helpers (move to `src/lib/utils.ts`).
-
-### 2. Authentication UX + route protection
-
-`src/integrations/supabase/auth-middleware.ts` exports `requireSupabaseAuth`
-and `attachSupabaseAuth`, but no route uses them and there is no login UI.
-
-- Add sign-in / sign-up UI (Supabase Auth — email/password) at `src/routes`.
-- Call `requireSupabaseAuth` in server functions and gate protected routes.
-- Wire the authenticated session into the sidebar/avatar (show role, sign out).
+- Call `requireSupabaseAuth` in the server functions in `src/lib/tasks-api.ts`.
+- Add a client guard/redirect: unauthenticated users hitting `/` are sent to
+  `/login`; signed-in users on `/login` are sent to `/`.
+- Wire the authenticated session (and role, from `profiles`) into the
+  sidebar/avatar with a sign-out action.
 - Ship a sign-in lander when unauthenticated instead of a blank error.
 
-### 3. Harden RLS
+### 2. Regenerate Supabase client types
 
-Current migration grants `SELECT/INSERT/UPDATE/DELETE` to `anon` and
-`authenticated` with open (`USING (true)`) policies — demo-only.
+The RLS/trigger migrations added SQL helper functions and a trigger, but
+`src/integrations/supabase/types.ts` has not been regenerated
+(`supabase gen types typescript …`). Regenerate and commit.
 
-- Port `authorization` schema or implement ownership/role-based policies:
-  - `profiles.*` — manage own row; admins manage all.
-  - `teams`/`team_members` — members only where they belong.
-  - `projects`/`tasks` — members of the owning team.
-- Remove `anon` write grants; keep `authenticated` scoped.
-- Regenerate `src/integrations/supabase/types.ts` after schema changes.
+### 3. Tests — fill remaining gaps
 
-### 4. Tests
+- `tasks-api.ts` with a mocked Supabase client (CRUD + optimistic mutation
+  rollback on error).
+- SSR error-page smoke test — assert `src/server.ts` renders a friendly 500.
 
-No test suites exist. Add Vitest for `src/lib` and a smoke check for the SSR
-error path.
+### 4. CI + deployment
 
-- `task-ui.ts` (priority/status label mappings).
-- `tasks-api.ts` with mocked Supabase client (CRUD + optimistic mutation
-  rollback).
-- SSR error page — assert `src/server.ts` renders a friendly 500.
-- Add `npm test` script and wire Vitest into the repo.
+- CI workflow (`.github/workflows/`): `npx tsc --noEmit` → `npm run lint` →
+  `npm test` → `npm run build`.
+- Deployment: pick a Nitro preset (`node-server`, `vercel`,
+  `cloudflare-workers`) and document the build/deploy path.
 
-### 5. CI + deployment
+### 5. Hardening (noted in the RLS migration)
 
-No pipeline runs typecheck → lint → build today.
-
-- CI workflow: `npx tsc --noEmit` → `npm run lint` → `npm run build`.
-- Deployment: pick a Nitro preset (`node-server`, `vercel`, `cloudflare-workers`)
-  and document the build/deploy path.
+- Task status drag/update is currently open to all signed-in members; tighten
+  to assignee/owner (or use per-team ownership) when per-task ownership is
+  required.
+- Admin page persists role/policy changes through a server function (currently
+  reads `useProfiles`; writes not fully wired).
 
 ## Definition of done (current gap-map)
 
-| Area                   | Today      | Target                   |
-| ---------------------- | ---------- | ------------------------ |
-| `/tasks`               | ✅ live    | — (verified)             |
-| Dashboard `/`          | ⚠️ mock    | live metrics + chart     |
-| Kanban `/board`        | ⚠️ mock    | live + draggable         |
-| Projects `/projects`   | ⚠️ mock    | live                     |
-| Teams `/teams`         | ⚠️ mock    | live                     |
-| Analytics `/analytics` | ⚠️ mock    | live (real eval model)   |
-| Admin `/admin`         | ⚠️ mock    | live, role-aware         |
-| Auth                   | 🟡 partial | login + protected routes |
-| RLS                    | ⚠️ open    | role/ownership policies  |
-| Tests                  | ❌ none    | unit + SSR smoke         |
-| CI                     | ❌ none    | typecheck → lint → build |
-| Package manager        | ✅ npm     | —                        |
+| Area            | Today          | Target                     |
+| --------------- | -------------- | -------------------------- |
+| `/` (dashboard) | ✅ live        | —                          |
+| Kanban `/board` | ✅ live+drag   | —                          |
+| Projects /projects | ✅ live     | —                          |
+| Teams /teams    | ✅ live        | —                          |
+| Analytics /analytics | ✅ live  | —                          |
+| Auth UX         | ✅ login/signup | protected routes + session |
+| RLS             | ✅ hardened    | per-assignee task writes   |
+| Supabase types  | ⚠️ stale       | regenerated                |
+| Tests           | 🟡 partial     | api + SSR smoke added      |
+| CI              | ❌ none        | typecheck → lint → test → build |
+| Deployment      | ❌ none        | Nitro preset + docs        |
+| Package manager | ✅ npm         | —                          |
