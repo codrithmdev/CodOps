@@ -1,97 +1,147 @@
-import { CalendarDays, Flag } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { DragDropContext, Draggable, Droppable, type DropResult } from "@hello-pangea/dnd";
 
-import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { TaskCard } from "@/components/tasks/task-card";
 import { cn } from "@/lib/utils";
-import { initialsOf, nameOf, projects, tasks } from "@/lib/mock-data";
-import { STATUS_COLUMNS, type TaskPriority } from "@/lib/types";
-
-const priorityStyles: Record<TaskPriority, string> = {
-  low: "text-muted-foreground border-border",
-  medium: "text-primary border-primary/40 bg-primary/10",
-  high: "text-warning border-warning/40 bg-warning/10",
-  critical: "text-destructive border-destructive/40 bg-destructive/10",
-};
+import { COLUMNS } from "@/lib/task-ui";
+import {
+  useProfiles,
+  useProjects,
+  useTasks,
+  useUpdateTaskStatus,
+  type TaskStatusDb,
+} from "@/lib/tasks-api";
 
 export function KanbanBoard() {
-  return (
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-      {STATUS_COLUMNS.map((col) => {
-        const items = tasks.filter((t) => t.status === col.id);
-        return (
-          <div
-            key={col.id}
-            className="flex min-w-0 flex-col rounded-2xl border border-border bg-card/50 p-3"
-          >
-            <div className="mb-3 flex items-center justify-between gap-2 px-1">
-              <div className="flex min-w-0 items-center gap-2">
-                <span
-                  className={cn(
-                    "size-2 shrink-0 rounded-full",
-                    col.id === "completed" ? "bg-mint" : "bg-primary",
-                  )}
-                />
-                <h3 className="truncate text-xs font-bold tracking-[0.1em] uppercase">
-                  {col.label}
-                </h3>
-              </div>
-              <span className="shrink-0 rounded-md bg-muted px-1.5 py-0.5 font-mono text-[10px] font-bold text-muted-foreground">
-                {items.length}
-              </span>
-            </div>
+  const tasksQ = useTasks();
+  const projectsQ = useProjects();
+  const profilesQ = useProfiles();
+  const updateStatus = useUpdateTaskStatus();
 
-            <div className="space-y-2.5">
-              {items.map((t) => {
-                const project = projects.find((p) => p.id === t.project_id);
-                const assignee = nameOf(t.assigned_to);
-                return (
-                  <Card
-                    key={t.id}
-                    className="cursor-grab gap-0 rounded-xl border-border bg-card p-3 transition-all hover:-translate-y-0.5 hover:border-primary/50"
-                  >
-                    <p className="text-sm leading-snug font-semibold">{t.title}</p>
-                    <p className="mt-1 truncate text-[11px] text-muted-foreground">
-                      {project?.name}
-                    </p>
-                    <div className="mt-3 flex items-center justify-between gap-2">
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  const projectById = useMemo(
+    () => new Map((projectsQ.data ?? []).map((p) => [p.id, p])),
+    [projectsQ.data],
+  );
+  const profileById = useMemo(
+    () => new Map((profilesQ.data ?? []).map((p) => [p.id, p])),
+    [profilesQ.data],
+  );
+
+  const onDragEnd = (result: DropResult) => {
+    const { destination, source, draggableId } = result;
+    if (!destination || destination.droppableId === source.droppableId) return;
+    updateStatus.mutate({ id: draggableId, status: destination.droppableId as TaskStatusDb });
+  };
+
+  const loading = tasksQ.isLoading || !mounted;
+
+  if (tasksQ.isError) {
+    return (
+      <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
+        Couldn't load tasks: {(tasksQ.error as Error).message}
+        <Button variant="outline" size="sm" className="ml-3" onClick={() => tasksQ.refetch()}>
+          Retry
+        </Button>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {COLUMNS.map((c) => (
+          <div key={c.id} className="space-y-3 rounded-2xl border border-border bg-card/50 p-3">
+            <Skeleton className="h-4 w-24" />
+            {[0, 1, 2].map((i) => (
+              <Skeleton key={i} className="h-28 w-full rounded-xl" />
+            ))}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <DragDropContext onDragEnd={onDragEnd}>
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {COLUMNS.map((col) => {
+          const items = (tasksQ.data ?? []).filter((t) => t.status === col.id);
+          const done = col.id === "completed";
+          return (
+            <Droppable droppableId={col.id} key={col.id}>
+              {(provided, snapshot) => (
+                <div
+                  ref={provided.innerRef}
+                  {...provided.droppableProps}
+                  className={cn(
+                    "flex min-h-[220px] min-w-0 flex-col rounded-2xl border border-border bg-card/50 p-3 transition-colors",
+                    snapshot.isDraggingOver && "border-primary/60 bg-primary/5",
+                  )}
+                >
+                  <div className="mb-3 flex items-center justify-between gap-2 px-1">
+                    <div className="flex min-w-0 items-center gap-2">
                       <span
                         className={cn(
-                          "inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-bold tracking-wide uppercase",
-                          priorityStyles[t.priority],
+                          "size-2 shrink-0 rounded-full",
+                          done ? "bg-mint" : "bg-primary",
                         )}
-                      >
-                        <Flag className="size-2.5" />
-                        {t.priority}
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                          <CalendarDays className="size-3" />
-                          {t.due_date
-                            ? new Date(t.due_date).toLocaleDateString(undefined, {
-                                month: "short",
-                                day: "numeric",
-                              })
-                            : "—"}
-                        </span>
-                        <span
-                          title={assignee}
-                          className="grid size-6 place-items-center rounded-full bg-primary/20 text-[9px] font-bold text-primary"
-                        >
-                          {initialsOf(assignee)}
-                        </span>
-                      </div>
+                      />
+                      <h3 className="truncate text-xs font-bold tracking-[0.1em] uppercase">
+                        {col.label}
+                      </h3>
                     </div>
-                  </Card>
-                );
-              })}
-              {items.length === 0 && (
-                <div className="rounded-xl border border-dashed border-border p-6 text-center text-[11px] text-muted-foreground">
-                  Drop tasks here
+                    <span
+                      className={cn(
+                        "shrink-0 rounded-md px-1.5 py-0.5 font-mono text-[10px] font-bold",
+                        done ? "mint-badge" : "bg-muted text-muted-foreground",
+                      )}
+                    >
+                      {items.length}
+                    </span>
+                  </div>
+
+                  <div className="flex flex-1 flex-col gap-2.5">
+                    {items.map((task, index) => (
+                      <Draggable draggableId={task.id} index={index} key={task.id}>
+                        {(dragProvided, dragSnapshot) => (
+                          <div
+                            ref={dragProvided.innerRef}
+                            {...dragProvided.draggableProps}
+                            {...dragProvided.dragHandleProps}
+                          >
+                            <TaskCard
+                              task={task}
+                              project={
+                                task.project_id ? projectById.get(task.project_id) : undefined
+                              }
+                              assignee={
+                                task.assigned_to ? profileById.get(task.assigned_to) : undefined
+                              }
+                              dragging={dragSnapshot.isDragging}
+                              onEdit={() => {}}
+                            />
+                          </div>
+                        )}
+                      </Draggable>
+                    ))}
+                    {provided.placeholder}
+                    {items.length === 0 && !snapshot.isDraggingOver && (
+                      <p className="rounded-xl border border-dashed border-border/70 px-3 py-6 text-center text-xs text-muted-foreground">
+                        Nothing here
+                      </p>
+                    )}
+                  </div>
                 </div>
               )}
-            </div>
-          </div>
-        );
-      })}
-    </div>
+            </Droppable>
+          );
+        })}
+      </div>
+    </DragDropContext>
   );
 }
