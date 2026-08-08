@@ -15,6 +15,7 @@ import { Route as AnalyticsRouteImport } from './routes/analytics'
 import { Route as BoardRouteImport } from './routes/board'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ProjectsRouteImport } from './routes/projects'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as TasksRouteImport } from './routes/tasks'
 import { Route as TeamsRouteImport } from './routes/teams'
 
@@ -48,6 +49,11 @@ const ProjectsRoute = ProjectsRouteImport.update({
   path: '/projects',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TasksRoute = TasksRouteImport.update({
   id: '/tasks',
   path: '/tasks',
@@ -66,6 +72,7 @@ export interface FileRoutesByFullPath {
   '/board': typeof BoardRoute
   '/login': typeof LoginRoute
   '/projects': typeof ProjectsRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/tasks': typeof TasksRoute
   '/teams': typeof TeamsRoute
 }
@@ -76,6 +83,7 @@ export interface FileRoutesByTo {
   '/board': typeof BoardRoute
   '/login': typeof LoginRoute
   '/projects': typeof ProjectsRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/tasks': typeof TasksRoute
   '/teams': typeof TeamsRoute
 }
@@ -87,6 +95,7 @@ export interface FileRoutesById {
   '/board': typeof BoardRoute
   '/login': typeof LoginRoute
   '/projects': typeof ProjectsRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/tasks': typeof TasksRoute
   '/teams': typeof TeamsRoute
 }
@@ -99,6 +108,7 @@ export interface FileRouteTypes {
     | '/board'
     | '/login'
     | '/projects'
+    | '/reset-password'
     | '/tasks'
     | '/teams'
   fileRoutesByTo: FileRoutesByTo
@@ -109,6 +119,7 @@ export interface FileRouteTypes {
     | '/board'
     | '/login'
     | '/projects'
+    | '/reset-password'
     | '/tasks'
     | '/teams'
   id:
@@ -119,6 +130,7 @@ export interface FileRouteTypes {
     | '/board'
     | '/login'
     | '/projects'
+    | '/reset-password'
     | '/tasks'
     | '/teams'
   fileRoutesById: FileRoutesById
@@ -130,6 +142,7 @@ export interface RootRouteChildren {
   BoardRoute: typeof BoardRoute
   LoginRoute: typeof LoginRoute
   ProjectsRoute: typeof ProjectsRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   TasksRoute: typeof TasksRoute
   TeamsRoute: typeof TeamsRoute
 }
@@ -178,6 +191,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProjectsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/tasks': {
       id: '/tasks'
       path: '/tasks'
@@ -202,6 +222,7 @@ const rootRouteChildren: RootRouteChildren = {
   BoardRoute: BoardRoute,
   LoginRoute: LoginRoute,
   ProjectsRoute: ProjectsRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   TasksRoute: TasksRoute,
   TeamsRoute: TeamsRoute,
 }

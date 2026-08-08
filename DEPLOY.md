@@ -76,6 +76,22 @@ access).
 5. Click **Deploy**. Every future push to the connected branch redeploys
    automatically.
 
+### Email links (confirmation / password reset)
+
+Supabase sends confirmation and password-reset links to a redirect URL. If that
+URL is misconfigured (e.g. still `localhost`), clicking the link in the email
+lands on the wrong host. Set it correctly once:
+
+- **Supabase dashboard → Authentication → URL Configuration**:
+  - **Site URL**: your Vercel app URL (e.g. `https://your-app.vercel.app`).
+  - **Redirect URLs**: add the same Vercel URL plus any preview/PR URLs.
+- The app also passes `emailRedirectTo` (current `window.location.origin`) on
+  sign-up, resend, and reset requests, so links point at the live site even
+  when the dashboard defaults are wrong.
+- Optional: if you'd rather skip email confirmation entirely, turn off
+  **Confirm email** under **Authentication → Sign In / Providers → Email**. The
+  app then signs users straight in on sign-up; no confirmation email is sent.
+
 ---
 
 ## 3. First login + make yourself an admin

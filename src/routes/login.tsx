@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
-import { CircleDot, Hexagon, LogIn, UserPlus } from "lucide-react";
+import { CircleDot, Hexagon, LogIn, MailCheck, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -28,12 +28,17 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [needsConfirmation, setNeedsConfirmation] = useState(false);
+
+  const redirectTo = () => (typeof window !== "undefined" ? window.location.origin : undefined);
 
   const switchMode = (m: Mode) => {
     setMode(m);
     setEmail("");
     setPassword("");
     setName("");
+    setNeedsConfirmation(false);
   };
 
   const afterAuth = async () => {
@@ -53,12 +58,16 @@ function LoginPage() {
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
-          options: { data: { full_name: name } },
+          options: {
+            data: { full_name: name },
+            ...(redirectTo() ? { emailRedirectTo: redirectTo()! } : {}),
+          },
         });
         if (error) throw error;
         if (data.session) {
           await afterAuth();
         } else {
+          setNeedsConfirmation(true);
           toast.success("Account created", {
             description: "Check your email to confirm your account, then sign in.",
           });
@@ -66,6 +75,48 @@ function LoginPage() {
       }
     } catch (err) {
       toast.error("Authentication failed", { description: (err as Error).message });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const resendConfirmation = async () => {
+    setResending(true);
+    try {
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email,
+        options: { ...(redirectTo() ? { emailRedirectTo: redirectTo()! } : {}) },
+      });
+      if (error) throw error;
+      toast.success("Confirmation email sent", {
+        description: "Check your inbox for the new link.",
+      });
+    } catch (err) {
+      toast.error("Could not resend", { description: (err as Error).message });
+    } finally {
+      setResending(false);
+    }
+  };
+
+  const sendResetLink = async () => {
+    if (!email) {
+      toast.error("Enter your email first", {
+        description: "Type your account email above, then request the reset link.",
+      });
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${redirectTo()}/reset-password`,
+      });
+      if (error) throw error;
+      toast.success("Reset link sent", {
+        description: "Check your inbox and click the link to choose a new password.",
+      });
+    } catch (err) {
+      toast.error("Could not send reset link", { description: (err as Error).message });
     } finally {
       setSubmitting(false);
     }
@@ -168,6 +219,29 @@ function LoginPage() {
             >
               {mode === "signin" ? "Sign in to workspace" : "Create account"}
             </Button>
+
+            {mode === "signin" && (
+              <button
+                type="button"
+                onClick={sendResetLink}
+                disabled={submitting}
+                className="block w-full text-center text-xs font-medium text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
+              >
+                Forgot password?
+              </button>
+            )}
+
+            {mode === "signup" && needsConfirmation && (
+              <button
+                type="button"
+                onClick={resendConfirmation}
+                disabled={resending}
+                className="flex w-full items-center justify-center gap-1.5 text-xs font-medium text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
+              >
+                <MailCheck className="size-3.5" />
+                {resending ? "Sending…" : "Resend confirmation email"}
+              </button>
+            )}
           </form>
 
           <p className="mt-4 text-center text-[11px] text-muted-foreground">

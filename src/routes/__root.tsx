@@ -126,7 +126,7 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const { open, setOpen } = useCommandPalette();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const isAuthPage = pathname === "/login";
+  const isAuthPage = pathname === "/login" || pathname === "/reset-password";
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -158,9 +158,9 @@ function AuthGate() {
 
   useEffect(() => {
     if (!mounted || isPending) return;
-    if (!user && pathname !== "/login") {
+    if (!user && pathname !== "/login" && pathname !== "/reset-password") {
       navigate({ to: "/login" });
-    } else if (user && pathname === "/login") {
+    } else if (user && (pathname === "/login" || pathname === "/reset-password")) {
       navigate({ to: "/" });
     }
   }, [mounted, isPending, user, pathname, navigate]);
