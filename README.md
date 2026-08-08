@@ -129,21 +129,21 @@ supabase/
 
 ## Deployment
 
-This app deploys to **Netlify** (SSR via Netlify Functions) backed by
+This app deploys to **Vercel** (SSR via Vercel Functions with Nitro) backed by
 **Supabase**. The full step-by-step runbook is in [`DEPLOY.md`](./DEPLOY.md) —
 create the Supabase project, apply `supabase/migrations/`, add the two
-`VITE_*` env vars to Netlify, and import the GitHub repo. `netlify.toml`
-already wires the build, publish dir, and function entry point.
+`VITE_*` env vars to Vercel, and import the GitHub repo. The Nitro plugin in
+`vite.config.ts` auto-detects Vercel and wires the build output.
 
-`npm run build` compiles the client to `dist/client/` and the SSR handler to a
-Netlify Function; CI runs `typecheck → lint → test → build` on every push and
-PR via `.github/workflows/ci.yml`.
+`npm run build` compiles the client to `dist/client/` and the SSR handler via
+Nitro; CI runs `typecheck → lint → test → build` on every push and PR via
+`.github/workflows/ci.yml`.
 
-**Fallback presets** — if you ever leave Netlify, the app also builds as a
-standalone Node server (`node-server` preset, `node dist/server/server.js`) and
-can target Vercel or Cloudflare Workers. Whichever host is chosen, set
-`VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` in the environment; the
-client-side data layer relies on Supabase RLS for security.
+**Fallback presets** — if you ever leave Vercel, the app also builds as a
+standalone Node server (`node-server` preset, `node .output/server/index.mjs`)
+and can target Cloudflare Workers or other Nitro-backed hosts. Whichever host
+is chosen, set `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` in the
+environment; the client-side data layer relies on Supabase RLS for security.
 
 ## License
 

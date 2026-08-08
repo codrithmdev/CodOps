@@ -1,14 +1,14 @@
-# Deploy to Netlify + connect Supabase
+# Deploy to Vercel + connect Supabase
 
-This runbook takes the repo from a local app to a live Site on **Netlify**,
+This runbook takes the repo from a local app to a live Site on **Vercel**,
 backed by a **Supabase** Postgres database. You will need free accounts for
 both.
 
 ## 0. Prereqs
 
-- A **GitHub** repository containing this project (Netlify deploys from Git).
+- A **GitHub** repository containing this project (Vercel deploys from Git).
 - A **Supabase** account.
-- A **Netlify** account.
+- A **Vercel** account.
 
 ---
 
@@ -54,26 +54,26 @@ access).
 
 ---
 
-## 2. Deploy to Netlify
+## 2. Deploy to Vercel
 
 1. Push this repo to GitHub.
-2. In [Netlify](https://app.netlify.com), click **Add new site → Import an
-   existing project** and select the GitHub repo.
-3. The build settings are auto-detected from `netlify.toml`:
-   - **Build command:** `vite build`
-   - **Publish directory:** `dist/client`
-   - **Functions:** `dist/server` (the SSR handler → Netlify Function)
-
-4. Under **Site configuration → Environment variables**, add:
+2. In [Vercel](https://vercel.com), click **Add New → Project** and import the
+   GitHub repo.
+3. Vercel auto-detects TanStack Start + Nitro and fills in the build settings.
+   If it isn't detected, set the **Framework Preset** to `TanStack Start`
+   (or run `vercel project update <project> --framework tanstack-start`).
+   The Nitro plugin in `vite.config.ts` applies the Vercel preset at build
+   time, so no `vercel.json` is required.
+4. Under **Project → Settings → Environment Variables**, add:
 
    | Key                        | Value                     |
    | -------------------------- | ------------------------- |
    | `VITE_SUPABASE_URL`        | your Supabase project URL |
    | `VITE_SUPABASE_PUBLISHABLE_KEY` | your publishable key  |
 
-   (Both the client and the Netlify Function read `VITE_*` at build time.)
+   (Both the client and the server functions read `VITE_*` at build time.)
 
-5. Click **Deploy site**. Every future push to the connected branch redeploys
+5. Click **Deploy**. Every future push to the connected branch redeploys
    automatically.
 
 ---
@@ -116,11 +116,11 @@ where email = '<your-email>@...';
 
 - **Build fails on missing env vars** — the Supabase client throws when
   `VITE_SUPABASE_URL` / `VITE_SUPABASE_PUBLISHABLE_KEY` are unset. Add them in
-  the Netlify env settings before the build.
+  the Vercel env settings before the build.
 - **A view is empty** — migrations probably weren't run, or you're signed out
   (RLS hides rows from `anon`/unauthenticated sessions). Sign in, and confirm
   `supabase/migrations/*` all executed.
 - **`/admin` says "Admin access only"** — your role isn't `admin`; run the
   `update` above.
-- **SSR 500 but client works** — check Netlify Function logs (`Site → Logs →
+- **SSR 500 but client works** — check Vercel Function logs (`Deployments →
   Functions`) and the SSR env vars; SSR uses the same `VITE_*` values at build.

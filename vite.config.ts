@@ -1,5 +1,5 @@
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
-import netlify from "@netlify/vite-plugin-tanstack-start";
+import { nitro } from "nitro/vite";
 import tailwindcss from "@tailwindcss/vite";
 import viteReact from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
@@ -10,10 +10,10 @@ export default defineConfig({
     // Order matters: tanstackStart must come before the other plugins.
     tanstackStart({
       // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
-      // Netlify/vite builds from this.
+      // Vercel/Nitro builds from this.
       server: { entry: "server" },
     }),
-    netlify(),
+    nitro(),
     viteReact(),
     tailwindcss(),
     // Provides the "@/*" path alias from tsconfig.json.
