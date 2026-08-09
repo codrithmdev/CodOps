@@ -20,6 +20,7 @@ export type TaskInsert = Database["public"]["Tables"]["tasks"]["Insert"];
 export type ProjectRow = Database["public"]["Tables"]["projects"]["Row"];
 export type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
 export type TeamRow = Database["public"]["Tables"]["teams"]["Row"];
+export type TeamInsert = Database["public"]["Tables"]["teams"]["Insert"];
 export type TaskStatusDb = Database["public"]["Enums"]["task_status"];
 export type TaskPriorityDb = Database["public"]["Enums"]["task_priority"];
 
@@ -310,5 +311,22 @@ export function useSaveProject() {
     },
     onError: (error) =>
       toast.error("Couldn't create project", { description: (error as Error).message }),
+  });
+}
+
+/** Create a team (RLS-gated to admins). */
+export function useCreateTeam() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (values: TeamInsert) => {
+      const { error } = await supabase.from("teams").insert(values);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Team created");
+      qc.invalidateQueries({ queryKey: taskKeys.teams });
+    },
+    onError: (error) =>
+      toast.error("Couldn't create team", { description: (error as Error).message }),
   });
 }

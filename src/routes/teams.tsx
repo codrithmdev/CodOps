@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { UserPlus } from "lucide-react";
+import { UserPlus, Users } from "lucide-react";
 
 import { PageHeader } from "@/components/page-header";
 import { RolePill } from "@/components/role-pill";
 import { TeamInviteDialog } from "@/components/team-invite-dialog";
+import { TeamDialog } from "@/components/team-dialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -33,6 +34,7 @@ function TeamsPage() {
   const membersQ = useTeamMembers();
   const profilesQ = useProfiles();
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
 
   const teams = teamsQ.data ?? [];
   const teamMembers = membersQ.data ?? [];
@@ -46,15 +48,24 @@ function TeamsPage() {
         title="Teams"
         subtitle="Rosters, leads and role assignments sourced from team_members."
         action={
-          <Button
-            onClick={() => setInviteOpen(true)}
-            className="glow-primary shrink-0 gap-1.5 rounded-xl"
-          >
-            <UserPlus className="size-4" /> Invite
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => setCreateOpen(true)}
+              className="glow-primary shrink-0 gap-1.5 rounded-xl"
+            >
+              <Users className="size-4" /> New Team
+            </Button>
+            <Button
+              onClick={() => setInviteOpen(true)}
+              className="glow-primary shrink-0 gap-1.5 rounded-xl"
+            >
+              <UserPlus className="size-4" /> Invite
+            </Button>
+          </div>
         }
       />
       <TeamInviteDialog open={inviteOpen} onOpenChange={setInviteOpen} />
+      <TeamDialog open={createOpen} onOpenChange={setCreateOpen} />
 
       {teamsQ.isError && (
         <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
