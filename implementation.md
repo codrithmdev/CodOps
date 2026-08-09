@@ -71,16 +71,16 @@ building, testing, or shipping.
 
 ## Definition of done (current gap-map)
 
-| Area            | Today          | Target                     |
-| --------------- | -------------- | -------------------------- |
-| `/` (dashboard) | ✅ live        | —                          |
-| Kanban `/board` | ✅ live+drag   | —                          |
-| Projects /projects | ✅ live     | —                          |
-| Teams /teams    | ✅ live        | —                          |
-| Analytics /analytics | ✅ live  | —                          |
-| Auth            | ✅ gated+session | —                      |
-| RLS             | ✅ hardened    | per-assignee task writes   |
-| Tests           | ✅ 18 passing  | —                          |
-| CI              | ✅ workflow    | enabled on remote host     |
-| Deployment      | 🟡 docs        | wired deploy step        |
-| Package manager | ✅ npm         | —                          |
+| Area                 | Today            | Target                   |
+| -------------------- | ---------------- | ------------------------ |
+| `/` (dashboard)      | ✅ live          | —                        |
+| Kanban `/board`      | ✅ live+drag     | —                        |
+| Projects /projects   | ✅ live          | —                        |
+| Teams /teams         | ✅ live          | —                        |
+| Analytics /analytics | ✅ live          | —                        |
+| Auth                 | ✅ gated+session | —                        |
+| RLS                  | ✅ hardened      | per-assignee task writes |
+| Tests                | ✅ 18 passing    | —                        |
+| CI                   | ✅ workflow      | enabled on remote host   |
+| Deployment           | 🟡 docs          | wired deploy step        |
+| Package manager      | ✅ npm           | —                        |

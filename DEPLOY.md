@@ -25,11 +25,11 @@ both.
 The schema lives in `supabase/migrations/`. Apply them to the remote DB **in
 order**:
 
-| File | Purpose |
-| ---- | ------- |
-| `20260807114326_*.sql` | Base schema: enums, tables, `set_updated_at`, 12-task seed |
-| `20260807160000_link_auth_to_profiles.sql` | Create a `profiles` row on sign-up |
-| `20260807170000_harden_rls.sql` | Role/ownership RLS, revoke `anon` writes |
+| File                                       | Purpose                                                    |
+| ------------------------------------------ | ---------------------------------------------------------- |
+| `20260807114326_*.sql`                     | Base schema: enums, tables, `set_updated_at`, 12-task seed |
+| `20260807160000_link_auth_to_profiles.sql` | Create a `profiles` row on sign-up                         |
+| `20260807170000_harden_rls.sql`            | Role/ownership RLS, revoke `anon` writes                   |
 
 Option A — **Supabase CLI** (the project ref is already in `config.toml`):
 
@@ -46,6 +46,7 @@ can also run them directly.
 ### Get the publishable key
 
 In the project dashboard, go to **Settings → API**. Copy:
+
 - **Project URL** → used as `VITE_SUPABASE_URL`
 - **Publishable (anon) key** → used as `VITE_SUPABASE_PUBLISHABLE_KEY`
 
@@ -66,15 +67,15 @@ access).
    time, so no `vercel.json` is required.
 4. Under **Project → Settings → Environment Variables**, add:
 
-| Key                        | Value                     |
-    | -------------------------- | ------------------------- |
-    | `VITE_SUPABASE_URL`        | your Supabase project URL |
-    | `VITE_SUPABASE_PUBLISHABLE_KEY` | your public key  |
+| Key                             | Value                     |
+| ------------------------------- | ------------------------- |
+| `VITE_SUPABASE_URL`             | your Supabase project URL |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | your public key           |
 
-   Both the client and the server functions read `VITE_*` at build time. The
-   server-side modules (`auth-middleware.ts`, `client.server.ts`) also fall back
-   to `SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` if you prefer server-only
-   names, so either naming works on Vercel.
+Both the client and the server functions read `VITE_*` at build time. The
+server-side modules (`auth-middleware.ts`, `client.server.ts`) also fall back
+to `SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` if you prefer server-only
+names, so either naming works on Vercel.
 
 5. Click **Deploy**. Every future push to the connected branch redeploys
    automatically.
@@ -147,4 +148,4 @@ where email = '<your-email>@...';
 - **`/admin` says "Admin access only"** — your role isn't `admin`; run the
   `update` above.
 - **SSR 500 but client works** — check Vercel Function logs (`Deployments →
-  Functions`) and the SSR env vars; SSR uses the same `VITE_*` values at build.
+Functions`) and the SSR env vars; SSR uses the same `VITE_*` values at build.
