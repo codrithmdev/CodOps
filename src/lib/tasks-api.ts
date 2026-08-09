@@ -21,6 +21,7 @@ export type ProjectRow = Database["public"]["Tables"]["projects"]["Row"];
 export type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
 export type TeamRow = Database["public"]["Tables"]["teams"]["Row"];
 export type TeamInsert = Database["public"]["Tables"]["teams"]["Insert"];
+export type TeamUpdate = Database["public"]["Tables"]["teams"]["Update"];
 export type TaskStatusDb = Database["public"]["Enums"]["task_status"];
 export type TaskPriorityDb = Database["public"]["Enums"]["task_priority"];
 
@@ -328,5 +329,39 @@ export function useCreateTeam() {
     },
     onError: (error) =>
       toast.error("Couldn't create team", { description: (error as Error).message }),
+  });
+}
+
+/** Update a team (RLS-gated to admins). */
+export function useUpdateTeam() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, values }: { id: string; values: TeamUpdate }) => {
+      const { error } = await supabase.from("teams").update(values).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Team updated");
+      qc.invalidateQueries({ queryKey: taskKeys.teams });
+    },
+    onError: (error) =>
+      toast.error("Couldn't update team", { description: (error as Error).message }),
+  });
+}
+
+/** Delete a team (RLS-gated to admins). */
+export function useDeleteTeam() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("teams").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Team deleted");
+      qc.invalidateQueries({ queryKey: taskKeys.teams });
+    },
+    onError: (error) =>
+      toast.error("Couldn't delete team", { description: (error as Error).message }),
   });
 }

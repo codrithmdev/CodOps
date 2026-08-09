@@ -13,15 +13,24 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useCreateTeam, type TeamInsert } from "@/lib/tasks-api";
+import { useCreateTeam, useUpdateTeam, type TeamInsert, type TeamUpdate } from "@/lib/tasks-api";
+
+interface TeamData {
+  id: string;
+  name: string;
+  description: string;
+}
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  initialData?: TeamData | null;
 }
 
-export function TeamDialog({ open, onOpenChange }: Props) {
+export function TeamDialog({ open, onOpenChange, initialData }: Props) {
   const create = useCreateTeam();
+  const update = useUpdateTeam();
+  const isEditing = !!initialData;
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -30,30 +39,38 @@ export function TeamDialog({ open, onOpenChange }: Props) {
   useEffect(() => {
     if (!open) return;
     setError(null);
-    setName("");
-    setDescription("");
-  }, [open]);
+    if (initialData) {
+      setName(initialData.name);
+      setDescription(initialData.description);
+    } else {
+      setName("");
+      setDescription("");
+    }
+  }, [open, initialData]);
 
   const submit = () => {
     if (!name.trim()) {
       setError("Name is required.");
       return;
     }
-    create.mutate(
-      {
-        name: name.trim(),
-        description: description.trim() || null,
-      } as TeamInsert,
-      { onSuccess: () => onOpenChange(false) },
-    );
+    const values = { name: name.trim(), description: description.trim() || null };
+    if (isEditing && initialData) {
+      update.mutate({ id: initialData.id, values } as { id: string; values: TeamUpdate }, {
+        onSuccess: () => onOpenChange(false),
+      });
+    } else {
+      create.mutate(values as TeamInsert, { onSuccess: () => onOpenChange(false) });
+    }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>New team</DialogTitle>
-          <DialogDescription>Create a new team and add members later.</DialogDescription>
+          <DialogTitle>{isEditing ? "Edit team" : "New team"}</DialogTitle>
+          <DialogDescription>
+            {isEditing ? "Update team details." : "Create a new team and add members later."}
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -87,9 +104,17 @@ export function TeamDialog({ open, onOpenChange }: Props) {
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={submit} disabled={create.isPending} className="glow-primary gap-1.5">
+          <Button
+            onClick={submit}
+            disabled={create.isPending || update.isPending}
+            className="glow-primary gap-1.5"
+          >
             <Users className="size-4" />
-            {create.isPending ? "Creating…" : "Create team"}
+            {create.isPending || update.isPending
+              ? "Saving…"
+              : isEditing
+                ? "Save changes"
+                : "Create team"}
           </Button>
         </DialogFooter>
       </DialogContent>
