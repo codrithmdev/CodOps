@@ -189,5 +189,7 @@ function AuthGate() {
     }
   }, [mounted, isPending, user, pathname, navigate]);
 
+  if (!mounted) return null;
+
   return null;
 }
