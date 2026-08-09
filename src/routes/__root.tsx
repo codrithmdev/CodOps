@@ -176,9 +176,12 @@ function RootComponent() {
 function AuthGate() {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const { data: user, isPending } = useCurrentUser();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+
+  const { data: user, isPending } = useCurrentUser({
+    enabled: mounted,
+  });
 
   useEffect(() => {
     if (!mounted || isPending) return;

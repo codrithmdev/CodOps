@@ -69,7 +69,7 @@ export function useProfiles() {
 }
 
 /** The signed-in user's profile row, or null when unauthenticated. */
-export function useCurrentUser() {
+export function useCurrentUser(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ["current-user"],
     queryFn: async (): Promise<ProfileRow | null> => {
@@ -85,6 +85,7 @@ export function useCurrentUser() {
       if (error) throw error;
       return data ?? null;
     },
+    enabled: options?.enabled ?? true,
   });
 }
 
