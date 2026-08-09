@@ -15,10 +15,12 @@ import { KanbanBoard } from "@/components/kanban-board";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
+import { requireAuth } from "@/lib/auth-guard";
 import { cn } from "@/lib/utils";
 import { useDashboardMetrics, useProjectHealth, useThroughput } from "@/lib/tasks-api";
 
 export const Route = createFileRoute("/")({
+  beforeLoad: requireAuth,
   head: () => ({
     meta: [
       { title: "Dashboard — CodOps Task & HR Intelligence" },

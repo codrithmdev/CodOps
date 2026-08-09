@@ -1,16 +1,20 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 import { Plus } from "lucide-react";
 
 import { PageHeader } from "@/components/page-header";
+import { ProjectDialog } from "@/components/project-dialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
+import { requireAuth } from "@/lib/auth-guard";
 import { cn } from "@/lib/utils";
 import { useProjectHealth, useProjects, useTeams } from "@/lib/tasks-api";
 import type { ProjectStatus } from "@/lib/types";
 
 export const Route = createFileRoute("/projects")({
+  beforeLoad: requireAuth,
   head: () => ({
     meta: [
       { title: "Projects — CodOps" },
@@ -39,6 +43,7 @@ function ProjectsPage() {
   const projectsQ = useProjects();
   const healthQ = useProjectHealth();
   const teamsQ = useTeams();
+  const [createOpen, setCreateOpen] = useState(false);
 
   const projects = projectsQ.data ?? [];
   const healthById = new Map((healthQ.data ?? []).map((h) => [h.project_id, h]));
@@ -52,11 +57,15 @@ function ProjectsPage() {
         title="Projects"
         subtitle="Portfolio delivery across every team in the organization."
         action={
-          <Button className="glow-primary shrink-0 gap-1.5 rounded-xl">
+          <Button
+            onClick={() => setCreateOpen(true)}
+            className="glow-primary shrink-0 gap-1.5 rounded-xl"
+          >
             <Plus className="size-4" /> New Project
           </Button>
         }
       />
+      <ProjectDialog open={createOpen} onOpenChange={setCreateOpen} />
 
       {projectsQ.isError && (
         <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">

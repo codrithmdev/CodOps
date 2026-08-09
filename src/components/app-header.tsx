@@ -62,7 +62,7 @@ export function AppHeader({ onCommand }: { onCommand: () => void }) {
 
         <div className="flex shrink-0 items-center gap-2">
           <Button
-            onClick={() => toast.success("New task composer", { description: "Shell demo action" })}
+            onClick={() => navigate({ to: "/tasks", search: { new: true } })}
             className="glow-primary h-9 gap-1.5 rounded-xl px-3 font-semibold transition-shadow hover:shadow-[0_0_0_1px_var(--primary),0_10px_34px_-6px_var(--primary)]"
           >
             <Plus className="size-4" />
@@ -75,7 +75,14 @@ export function AppHeader({ onCommand }: { onCommand: () => void }) {
             {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
           </Button>
 
-          <Button variant="ghost" size="icon" className="relative size-9 rounded-xl">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="relative size-9 rounded-xl"
+            onClick={() =>
+              toast("You're all caught up", { description: "No unread notifications." })
+            }
+          >
             <Bell className="size-4" />
             <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-mint" />
           </Button>
@@ -95,10 +102,18 @@ export function AppHeader({ onCommand }: { onCommand: () => void }) {
                 <span className="text-xs font-normal text-muted-foreground">{email}</span>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() =>
+                  toast("Profile", { description: `Signed in as ${email} (${role}).` })
+                }
+              >
                 <User className="size-4" /> Profile
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() =>
+                  toast("Preferences", { description: "Theme and workspace settings live here." })
+                }
+              >
                 <Settings className="size-4" /> Preferences
               </DropdownMenuItem>
               <DropdownMenuSeparator />

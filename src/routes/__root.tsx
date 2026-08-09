@@ -18,7 +18,19 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { AppHeader } from "@/components/app-header";
 import { CommandPalette, useCommandPalette } from "@/components/command-palette";
 import { useCurrentUser } from "@/lib/tasks-api";
+import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+
+const SESSION_COOKIE = "codops-session";
+const SESSION_COOKIE_AGE = 60 * 60 * 24 * 7; // 7 days
+
+function syncSessionCookie(token: string | null | undefined) {
+  if (typeof document === "undefined") return;
+  const secure = window.location.protocol === "https:" ? "; Secure" : "";
+  document.cookie = `${SESSION_COOKIE}=${token ?? ""}; path=/; max-age=${
+    token ? SESSION_COOKIE_AGE : 0
+  }; samesite=lax${secure}`;
+}
 
 function NotFoundComponent() {
   return (
@@ -127,6 +139,17 @@ function RootComponent() {
   const { open, setOpen } = useCommandPalette();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isAuthPage = pathname === "/login" || pathname === "/reset-password";
+
+  useEffect(() => {
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      syncSessionCookie(session?.access_token);
+    });
+    // Seed the cookie from the persisted session on first load.
+    supabase.auth.getSession().then(({ data: sessionData }) => {
+      syncSessionCookie(sessionData.session?.access_token);
+    });
+    return () => data.subscription.unsubscribe();
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>

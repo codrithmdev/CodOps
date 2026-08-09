@@ -14,10 +14,12 @@ import { PageHeader } from "@/components/page-header";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
+import { requireAuth } from "@/lib/auth-guard";
 import { initialsOf } from "@/lib/utils";
 import { useIndividualPerformance } from "@/lib/tasks-api";
 
 export const Route = createFileRoute("/analytics")({
+  beforeLoad: requireAuth,
   head: () => ({
     meta: [
       { title: "HR Analytics — CodOps" },

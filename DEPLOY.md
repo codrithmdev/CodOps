@@ -66,12 +66,15 @@ access).
    time, so no `vercel.json` is required.
 4. Under **Project → Settings → Environment Variables**, add:
 
-   | Key                        | Value                     |
-   | -------------------------- | ------------------------- |
-   | `VITE_SUPABASE_URL`        | your Supabase project URL |
-   | `VITE_SUPABASE_PUBLISHABLE_KEY` | your publishable key  |
+| Key                        | Value                     |
+    | -------------------------- | ------------------------- |
+    | `VITE_SUPABASE_URL`        | your Supabase project URL |
+    | `VITE_SUPABASE_PUBLISHABLE_KEY` | your public key  |
 
-   (Both the client and the server functions read `VITE_*` at build time.)
+   Both the client and the server functions read `VITE_*` at build time. The
+   server-side modules (`auth-middleware.ts`, `client.server.ts`) also fall back
+   to `SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` if you prefer server-only
+   names, so either naming works on Vercel.
 
 5. Click **Deploy**. Every future push to the connected branch redeploys
    automatically.
@@ -120,11 +123,16 @@ where email = '<your-email>@...';
 
 ## 4. Verify the live app
 
-- `/` (dashboard), `/board`, `/projects`, `/teams`, `/analytics` — all read
-  live Supabase rows under RLS.
+- `/` (dashboard), `/board`, `/projects`, `/teams`, `/analytics`, `/admin` —
+  all read live Supabase rows under RLS.
 - Create an account → create tasks on the Kanban board → drag cards between
   columns (optimistic + RLS-backed update).
-- Anonymous users hitting any protected route are redirected to `/login`.
+- Anonymous users hitting any protected route are server-side redirected to
+  `/login` via a `beforeLoad` guard (`src/lib/auth-guard.ts`). The client
+  syncs the session to a `codops-session` cookie so SSR can authenticate.
+- Only users whose `profiles.role` is `admin` can open `/admin`; leads/admins
+  can invite members on `/teams` and create projects on `/projects` (RLS-gated
+  inserts).
 
 ---
 

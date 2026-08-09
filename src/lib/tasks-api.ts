@@ -266,3 +266,49 @@ export function useDeleteTask() {
     onError: (error) => toast.error("Delete failed", { description: (error as Error).message }),
   });
 }
+
+export type AppRoleDb = Database["public"]["Enums"]["app_role"];
+
+interface AddTeamMemberInput {
+  teamId: string;
+  userId: string;
+  role: AppRoleDb;
+}
+
+/** Add a user to a team as a member or lead (RLS-gated to admins and team leads). */
+export function useAddTeamMember() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ teamId, userId, role }: AddTeamMemberInput) => {
+      const { error } = await supabase
+        .from("team_members")
+        .insert({ team_id: teamId, user_id: userId, role_in_team: role });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Member added to team");
+      qc.invalidateQueries({ queryKey: ["team-members"] });
+    },
+    onError: (error) =>
+      toast.error("Couldn't add member", { description: (error as Error).message }),
+  });
+}
+
+export type ProjectInsert = Database["public"]["Tables"]["projects"]["Insert"];
+
+/** Create a project (RLS-gated to admins and owning team leads). */
+export function useSaveProject() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (values: ProjectInsert) => {
+      const { error } = await supabase.from("projects").insert(values);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Project created");
+      qc.invalidateQueries({ queryKey: taskKeys.projects });
+    },
+    onError: (error) =>
+      toast.error("Couldn't create project", { description: (error as Error).message }),
+  });
+}

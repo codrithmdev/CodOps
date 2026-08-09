@@ -1,15 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 import { UserPlus } from "lucide-react";
 
 import { PageHeader } from "@/components/page-header";
 import { RolePill } from "@/components/role-pill";
+import { TeamInviteDialog } from "@/components/team-invite-dialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { requireAuth } from "@/lib/auth-guard";
 import { initialsOf } from "@/lib/utils";
 import { useProfiles, useTeamMembers, useTeams } from "@/lib/tasks-api";
 
 export const Route = createFileRoute("/teams")({
+  beforeLoad: requireAuth,
   head: () => ({
     meta: [
       { title: "Teams — CodOps" },
@@ -28,6 +32,7 @@ function TeamsPage() {
   const teamsQ = useTeams();
   const membersQ = useTeamMembers();
   const profilesQ = useProfiles();
+  const [inviteOpen, setInviteOpen] = useState(false);
 
   const teams = teamsQ.data ?? [];
   const teamMembers = membersQ.data ?? [];
@@ -41,11 +46,15 @@ function TeamsPage() {
         title="Teams"
         subtitle="Rosters, leads and role assignments sourced from team_members."
         action={
-          <Button className="glow-primary shrink-0 gap-1.5 rounded-xl">
+          <Button
+            onClick={() => setInviteOpen(true)}
+            className="glow-primary shrink-0 gap-1.5 rounded-xl"
+          >
             <UserPlus className="size-4" /> Invite
           </Button>
         }
       />
+      <TeamInviteDialog open={inviteOpen} onOpenChange={setInviteOpen} />
 
       {teamsQ.isError && (
         <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">

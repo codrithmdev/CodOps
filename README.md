@@ -10,15 +10,22 @@ the data layer.
 ## Features
 
 - **Dashboard** (`/`) — live throughput chart, project health and delivery metrics
-- **Kanban Board** (`/board`) — all tasks grouped by workflow state
+- **Kanban Board** (`/board`) — all tasks, optionally grouped by status or priority,
+  with a priority filter
 - **Task Board** (`/tasks`) — full CRUD task board with:
   - drag-and-drop status updates (optimistic, persisted to Supabase)
   - search and filters by project, team, assignee and priority
   - create / edit / delete dialog with due-date picker
-- **Projects** (`/projects`) — portfolio view with progress and delivery risk
-- **Teams** (`/teams`) — rosters, leads and role assignments
+  - the header "New Task" button opens the create dialog directly (`/tasks?new=1`)
+- **Projects** (`/projects`) — portfolio view with progress and delivery risk,
+  plus a "New Project" dialog to create projects
+- **Teams** (`/teams`) — rosters, leads and role assignments, with an
+  "Invite" dialog that adds members (RLS-gated to admins and team leads)
 - **HR Analytics** (`/analytics`) — per-member on-time completion, throughput and overdue load
 - **Admin Controls** (`/admin`) — role governance and workspace policies
+- Server-side route guard: protected routes redirect unauthenticated users to
+  `/login` via a `beforeLoad` guard (`src/lib/auth-guard.ts`); the session is
+  synced to a `codops-session` cookie so SSR can authenticate
 - ⌘K command palette, dark/light theme, collapsible sidebar
 
 ## Tech stack
@@ -77,7 +84,8 @@ It creates:
 
 - Enums: `app_role`, `task_priority`, `task_status`, `project_status`
 - Tables: `profiles`, `teams`, `team_members`, `projects`, `tasks`
-- `updated_at` trigger, RLS with open workspace access, and seed data
+- `updated_at` trigger, role/ownership-scoped RLS (`20260807170000_harden_rls.sql`),
+  and seed data
 
 The typed Supabase client (`src/integrations/supabase/types.ts`) mirrors this
 schema. Regenerate it after schema changes with:
@@ -116,10 +124,11 @@ supabase/
   migrations/          SQL schema + seed
 ```
 
-> **Note on data sources:** the dashboard, kanban, projects, teams, analytics
-> and admin views currently render seeded **mock data** (`src/lib/mock-data.ts`),
-> while the **Task Board** (`/tasks`) reads and writes real Supabase tables via
-> `src/lib/tasks-api.ts`. See `projectstatus.md` for the migration roadmap.
+> **Data sources:** all views read live Supabase tables through the hooks in
+> `src/lib/tasks-api.ts`. Dashboard metrics, project health and HR analytics are
+> computed client-side from `tasks`, `projects`, `profiles` and `teams`. Writes
+> (tasks, team membership, projects) mutate the same tables and are gated by
+> RLS. See `projectstatus.md` for the roadmap.
 
 ## SSR error handling
 

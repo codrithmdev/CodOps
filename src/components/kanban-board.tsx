@@ -4,23 +4,35 @@ import { DragDropContext, Draggable, Droppable, type DropResult } from "@hello-p
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { TaskCard } from "@/components/tasks/task-card";
+import { TaskDialog } from "@/components/tasks/task-dialog";
 import { cn } from "@/lib/utils";
-import { COLUMNS } from "@/lib/task-ui";
+import { COLUMNS, PRIORITIES, PRIORITY_LABEL } from "@/lib/task-ui";
 import {
   useProfiles,
   useProjects,
   useTasks,
   useUpdateTaskStatus,
+  type TaskPriorityDb,
+  type TaskRow,
   type TaskStatusDb,
 } from "@/lib/tasks-api";
 
-export function KanbanBoard() {
+export type BoardGroupBy = "status" | "priority";
+
+interface KanbanBoardProps {
+  groupBy?: BoardGroupBy;
+  priorityFilter?: TaskPriorityDb | "all";
+}
+
+export function KanbanBoard({ groupBy = "status", priorityFilter = "all" }: KanbanBoardProps) {
   const tasksQ = useTasks();
   const projectsQ = useProjects();
   const profilesQ = useProfiles();
   const updateStatus = useUpdateTaskStatus();
 
   const [mounted, setMounted] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editing, setEditing] = useState<TaskRow | null>(null);
   useEffect(() => setMounted(true), []);
 
   const projectById = useMemo(
@@ -32,9 +44,20 @@ export function KanbanBoard() {
     [profilesQ.data],
   );
 
+  const filtered = useMemo(
+    () =>
+      (tasksQ.data ?? []).filter((t) =>
+        priorityFilter === "all" ? true : t.priority === priorityFilter,
+      ),
+    [tasksQ.data, priorityFilter],
+  );
+
   const onDragEnd = (result: DropResult) => {
     const { destination, source, draggableId } = result;
     if (!destination || destination.droppableId === source.droppableId) return;
+    // Status columns use the status id as droppableId; priority groups are not
+    // drop targets for status changes, so only update when grouping by status.
+    if (groupBy === "priority") return;
     updateStatus.mutate({ id: draggableId, status: destination.droppableId as TaskStatusDb });
   };
 
@@ -66,82 +89,103 @@ export function KanbanBoard() {
     );
   }
 
+  const groups =
+    groupBy === "priority"
+      ? PRIORITIES.map((p) => ({ id: p, label: PRIORITY_LABEL[p], done: false }))
+      : COLUMNS.map((c) => ({ id: c.id, label: c.label, done: c.id === "completed" }));
+
+  const openEdit = (task: TaskRow) => {
+    setEditing(task);
+    setDialogOpen(true);
+  };
+
   return (
-    <DragDropContext onDragEnd={onDragEnd}>
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {COLUMNS.map((col) => {
-          const items = (tasksQ.data ?? []).filter((t) => t.status === col.id);
-          const done = col.id === "completed";
-          return (
-            <Droppable droppableId={col.id} key={col.id}>
-              {(provided, snapshot) => (
-                <div
-                  ref={provided.innerRef}
-                  {...provided.droppableProps}
-                  className={cn(
-                    "flex min-h-[220px] min-w-0 flex-col rounded-2xl border border-border bg-card/50 p-3 transition-colors",
-                    snapshot.isDraggingOver && "border-primary/60 bg-primary/5",
-                  )}
-                >
-                  <div className="mb-3 flex items-center justify-between gap-2 px-1">
-                    <div className="flex min-w-0 items-center gap-2">
+    <>
+      <DragDropContext onDragEnd={onDragEnd}>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {groups.map((col) => {
+            const items = filtered.filter((t) =>
+              groupBy === "priority" ? t.priority === col.id : t.status === col.id,
+            );
+            return (
+              <Droppable droppableId={col.id} key={col.id}>
+                {(provided, snapshot) => (
+                  <div
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    className={cn(
+                      "flex min-h-[220px] min-w-0 flex-col rounded-2xl border border-border bg-card/50 p-3 transition-colors",
+                      snapshot.isDraggingOver && "border-primary/60 bg-primary/5",
+                    )}
+                  >
+                    <div className="mb-3 flex items-center justify-between gap-2 px-1">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <span
+                          className={cn(
+                            "size-2 shrink-0 rounded-full",
+                            col.done ? "bg-mint" : "bg-primary",
+                          )}
+                        />
+                        <h3 className="truncate text-xs font-bold tracking-[0.1em] uppercase">
+                          {col.label}
+                        </h3>
+                      </div>
                       <span
                         className={cn(
-                          "size-2 shrink-0 rounded-full",
-                          done ? "bg-mint" : "bg-primary",
+                          "shrink-0 rounded-md px-1.5 py-0.5 font-mono text-[10px] font-bold",
+                          col.done ? "mint-badge" : "bg-muted text-muted-foreground",
                         )}
-                      />
-                      <h3 className="truncate text-xs font-bold tracking-[0.1em] uppercase">
-                        {col.label}
-                      </h3>
+                      >
+                        {items.length}
+                      </span>
                     </div>
-                    <span
-                      className={cn(
-                        "shrink-0 rounded-md px-1.5 py-0.5 font-mono text-[10px] font-bold",
-                        done ? "mint-badge" : "bg-muted text-muted-foreground",
-                      )}
-                    >
-                      {items.length}
-                    </span>
-                  </div>
 
-                  <div className="flex flex-1 flex-col gap-2.5">
-                    {items.map((task, index) => (
-                      <Draggable draggableId={task.id} index={index} key={task.id}>
-                        {(dragProvided, dragSnapshot) => (
-                          <div
-                            ref={dragProvided.innerRef}
-                            {...dragProvided.draggableProps}
-                            {...dragProvided.dragHandleProps}
-                          >
-                            <TaskCard
-                              task={task}
-                              project={
-                                task.project_id ? projectById.get(task.project_id) : undefined
-                              }
-                              assignee={
-                                task.assigned_to ? profileById.get(task.assigned_to) : undefined
-                              }
-                              dragging={dragSnapshot.isDragging}
-                              onEdit={() => {}}
-                            />
-                          </div>
-                        )}
-                      </Draggable>
-                    ))}
-                    {provided.placeholder}
-                    {items.length === 0 && !snapshot.isDraggingOver && (
-                      <p className="rounded-xl border border-dashed border-border/70 px-3 py-6 text-center text-xs text-muted-foreground">
-                        Nothing here
-                      </p>
-                    )}
+                    <div className="flex flex-1 flex-col gap-2.5">
+                      {items.map((task, index) => (
+                        <Draggable draggableId={task.id} index={index} key={task.id}>
+                          {(dragProvided, dragSnapshot) => (
+                            <div
+                              ref={dragProvided.innerRef}
+                              {...dragProvided.draggableProps}
+                              {...dragProvided.dragHandleProps}
+                            >
+                              <TaskCard
+                                task={task}
+                                project={
+                                  task.project_id ? projectById.get(task.project_id) : undefined
+                                }
+                                assignee={
+                                  task.assigned_to ? profileById.get(task.assigned_to) : undefined
+                                }
+                                dragging={dragSnapshot.isDragging}
+                                onEdit={openEdit}
+                              />
+                            </div>
+                          )}
+                        </Draggable>
+                      ))}
+                      {provided.placeholder}
+                      {items.length === 0 && !snapshot.isDraggingOver && (
+                        <p className="rounded-xl border border-dashed border-border/70 px-3 py-6 text-center text-xs text-muted-foreground">
+                          Nothing here
+                        </p>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
-            </Droppable>
-          );
-        })}
-      </div>
-    </DragDropContext>
+                )}
+              </Droppable>
+            );
+          })}
+        </div>
+      </DragDropContext>
+
+      <TaskDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        task={editing}
+        projects={projectsQ.data ?? []}
+        profiles={profilesQ.data ?? []}
+      />
+    </>
   );
 }

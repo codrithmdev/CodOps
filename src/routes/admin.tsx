@@ -6,10 +6,12 @@ import { RolePill } from "@/components/role-pill";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
+import { requireAuth } from "@/lib/auth-guard";
 import { initialsOf } from "@/lib/utils";
 import { useCurrentUser, useProfiles } from "@/lib/tasks-api";
 
 export const Route = createFileRoute("/admin")({
+  beforeLoad: requireAuth,
   head: () => ({
     meta: [
       { title: "Admin Controls — CodOps" },

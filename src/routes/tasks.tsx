@@ -1,9 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { z } from "zod";
 
 import { PageHeader } from "@/components/page-header";
 import { TasksBoard } from "@/components/tasks/tasks-board";
+import { requireAuth } from "@/lib/auth-guard";
+
+const taskSearchSchema = z.object({
+  new: z.boolean().optional(),
+});
 
 export const Route = createFileRoute("/tasks")({
+  beforeLoad: requireAuth,
+  validateSearch: taskSearchSchema,
   head: () => ({
     meta: [
       { title: "Task Board — CodOps Workspace" },
@@ -25,13 +33,14 @@ export const Route = createFileRoute("/tasks")({
 });
 
 function TasksPage() {
+  const { new: isNew } = Route.useSearch();
   return (
     <div className="space-y-6">
       <PageHeader
         title="Task Board"
         subtitle="Drag cards between columns to update status instantly across your workspace."
       />
-      <TasksBoard />
+      <TasksBoard autoOpenNew={isNew} />
     </div>
   );
 }

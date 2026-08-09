@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { DragDropContext, Draggable, Droppable, type DropResult } from "@hello-pangea/dnd";
+import { useNavigate } from "@tanstack/react-router";
 import { Plus, Search, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -28,7 +29,8 @@ import {
 
 const ALL = "all";
 
-export function TasksBoard() {
+export function TasksBoard({ autoOpenNew = false }: { autoOpenNew?: boolean | undefined }) {
+  const navigate = useNavigate();
   const tasksQ = useTasks();
   const projectsQ = useProjects();
   const profilesQ = useProfiles();
@@ -45,6 +47,18 @@ export function TasksBoard() {
   const [priority, setPriority] = useState(ALL);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<TaskRow | null>(null);
+
+  useEffect(() => {
+    if (autoOpenNew) {
+      setEditing(null);
+      setDialogOpen(true);
+    }
+  }, [autoOpenNew]);
+
+  const closeDialog = (open: boolean) => {
+    setDialogOpen(open);
+    if (!open && autoOpenNew) navigate({ to: "/tasks", search: {} });
+  };
 
   const projects = projectsQ.data ?? [];
   const profiles = profilesQ.data ?? [];
@@ -278,7 +292,7 @@ export function TasksBoard() {
 
       <TaskDialog
         open={dialogOpen}
-        onOpenChange={setDialogOpen}
+        onOpenChange={closeDialog}
         task={editing}
         projects={projects}
         profiles={profiles}
