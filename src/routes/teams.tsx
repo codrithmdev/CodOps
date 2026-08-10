@@ -25,6 +25,7 @@ import {
 import { requireAuth } from "@/lib/auth-guard";
 import { initialsOf } from "@/lib/utils";
 import {
+  useCurrentUser,
   useProfiles,
   useTeamMembers,
   useTeams,
@@ -54,6 +55,7 @@ function TeamsPage() {
   const teamsQ = useTeams();
   const membersQ = useTeamMembers();
   const profilesQ = useProfiles();
+  const currentUserQ = useCurrentUser();
   const updateTeam = useUpdateTeam();
   const deleteTeam = useDeleteTeam();
   const updateMemberRole = useUpdateTeamMemberRole();
@@ -69,8 +71,19 @@ function TeamsPage() {
   const teams = teamsQ.data ?? [];
   const teamMembers = membersQ.data ?? [];
   const profiles = profilesQ.data ?? [];
+  const currentUser = currentUserQ.data;
 
-  const loading = teamsQ.isLoading || membersQ.isLoading || profilesQ.isLoading;
+  const loading =
+    teamsQ.isLoading || membersQ.isLoading || profilesQ.isLoading || currentUserQ.isLoading;
+
+  // Check if current user can manage a specific team (admin or team lead)
+  const canManageTeam = (teamId: string) => {
+    if (!currentUser) return false;
+    if (currentUser.role === "admin") return true;
+    return teamMembers.some(
+      (m) => m.team_id === teamId && m.user_id === currentUser.id && m.role_in_team === "lead",
+    );
+  };
 
   const handleEditClick = (team: { id: string; name: string; description: string | null }) => {
     setEditTeam({ id: team.id, name: team.name, description: team.description ?? "" });
@@ -186,6 +199,7 @@ function TeamsPage() {
                   {members.map((m) => {
                     const p = profiles.find((pr) => pr.id === m.user_id);
                     const name = p?.full_name ?? p?.email ?? "Unknown";
+                    const canManage = canManageTeam(team.id);
                     return (
                       <div key={m.id} className="flex min-w-0 items-center gap-3">
                         <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/20 text-[10px] font-bold text-primary">
@@ -195,47 +209,55 @@ function TeamsPage() {
                           <p className="truncate text-xs font-semibold">{name}</p>
                           <p className="truncate text-[10px] text-muted-foreground">{p?.email}</p>
                         </div>
-                        <Select
-                          value={m.role_in_team}
-                          onValueChange={(value) =>
-                            updateMemberRole.mutate({ id: m.id, role: value as "member" | "lead" })
-                          }
-                          disabled={updateMemberRole.isPending}
-                        >
-                          <SelectTrigger className="w-[110px] shrink-0">
-                            <SelectValue placeholder="Role" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {roleOptions.map((opt) => (
-                              <SelectItem key={opt.value} value={opt.value}>
-                                {opt.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
+                        {canManage && (
+                          <>
+                            <Select
+                              value={m.role_in_team}
+                              onValueChange={(value) =>
+                                updateMemberRole.mutate({
+                                  id: m.id,
+                                  role: value as "member" | "lead",
+                                })
+                              }
+                              disabled={updateMemberRole.isPending}
                             >
-                              <UserX className="size-3.5" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() => {
-                                if (confirm("Remove this member from the team?")) {
-                                  removeMember.mutate(m.id);
-                                }
-                              }}
-                              className="flex items-center gap-2 text-destructive focus:text-destructive"
-                            >
-                              <UserX className="size-4" /> Remove
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                              <SelectTrigger className="w-[110px] shrink-0">
+                                <SelectValue placeholder="Role" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {roleOptions.map((opt) => (
+                                  <SelectItem key={opt.value} value={opt.value}>
+                                    {opt.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
+                                >
+                                  <UserX className="size-3.5" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    if (confirm("Remove this member from the team?")) {
+                                      removeMember.mutate(m.id);
+                                    }
+                                  }}
+                                  className="flex items-center gap-2 text-destructive focus:text-destructive"
+                                >
+                                  <UserX className="size-4" /> Remove
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </>
+                        )}
+                        {!canManage && <RolePill role={m.role_in_team} />}
                       </div>
                     );
                   })}
