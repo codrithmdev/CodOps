@@ -366,3 +366,89 @@ export function useDeleteTeam() {
       toast.error("Couldn't delete team", { description: (error as Error).message }),
   });
 }
+export function useUpdateUserRole() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ userId, role }: { userId: string; role: AppRoleDb }) => {
+      const { error } = await supabase.from("profiles").update({ role }).eq("id", userId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Role updated");
+      qc.invalidateQueries({ queryKey: taskKeys.profiles });
+    },
+    onError: (error) =>
+      toast.error("Couldn't update role", { description: (error as Error).message }),
+  });
+}
+
+/** Update a team member's role (admin or team lead). */
+export function useUpdateTeamMemberRole() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, role }: { id: string; role: AppRoleDb }) => {
+      const { error } = await supabase
+        .from("team_members")
+        .update({ role_in_team: role })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Member role updated");
+      qc.invalidateQueries({ queryKey: ["team-members"] });
+    },
+    onError: (error) =>
+      toast.error("Couldn't update role", { description: (error as Error).message }),
+  });
+}
+
+/** Remove a team member (admin or team lead). */
+export function useRemoveTeamMember() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("team_members").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Member removed from team");
+      qc.invalidateQueries({ queryKey: ["team-members"] });
+    },
+    onError: (error) =>
+      toast.error("Couldn't remove member", { description: (error as Error).message }),
+  });
+}
+
+import { deactivateUser, reactivateUser } from "./admin-functions";
+
+/** Deactivate a user (admin only) - bans the auth account. */
+export function useDeactivateUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (userId: string) => {
+      await deactivateUser({ data: { userId } });
+    },
+    onSuccess: () => {
+      toast.success("User deactivated");
+      qc.invalidateQueries({ queryKey: taskKeys.profiles });
+    },
+    onError: (error) =>
+      toast.error("Couldn't deactivate user", { description: (error as Error).message }),
+  });
+}
+
+/** Reactivate a user (admin only). */
+export function useReactivateUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (userId: string) => {
+      await reactivateUser({ data: { userId } });
+    },
+    onSuccess: () => {
+      toast.success("User reactivated");
+      qc.invalidateQueries({ queryKey: taskKeys.profiles });
+    },
+    onError: (error) =>
+      toast.error("Couldn't reactivate user", { description: (error as Error).message }),
+  });
+}

@@ -1,14 +1,34 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ShieldCheck } from "lucide-react";
+import { ShieldCheck, ChevronDown, UserX, UserCheck } from "lucide-react";
 
 import { PageHeader } from "@/components/page-header";
 import { RolePill } from "@/components/role-pill";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { requireAuth } from "@/lib/auth-guard";
 import { initialsOf } from "@/lib/utils";
-import { useCurrentUser, useProfiles } from "@/lib/tasks-api";
+import {
+  useCurrentUser,
+  useProfiles,
+  useUpdateUserRole,
+  useDeactivateUser,
+  useReactivateUser,
+} from "@/lib/tasks-api";
+import type { AppRole } from "@/lib/types";
 
 export const Route = createFileRoute("/admin")({
   beforeLoad: requireAuth,
@@ -39,6 +59,9 @@ const policies = [
 function AdminPage() {
   const currentUserQ = useCurrentUser();
   const profilesQ = useProfiles();
+  const updateRole = useUpdateUserRole();
+  const deactivateUser = useDeactivateUser();
+  const reactivateUser = useReactivateUser();
   const profiles = profilesQ.data ?? [];
 
   if (currentUserQ.isPending) {
@@ -69,6 +92,14 @@ function AdminPage() {
       </div>
     );
   }
+
+  const roleOptions: { value: AppRole; label: string }[] = [
+    { value: "admin", label: "Admin" },
+    { value: "lead", label: "Team Lead" },
+    { value: "member", label: "Member" },
+  ];
+
+  const pendingAction = deactivateUser.isPending || reactivateUser.isPending;
 
   return (
     <div className="space-y-6">
@@ -114,7 +145,54 @@ function AdminPage() {
                       <p className="truncate text-xs font-semibold">{p.full_name}</p>
                       <p className="truncate text-[10px] text-muted-foreground">{p.email}</p>
                     </div>
-                    <RolePill role={p.role} />
+                    <Select
+                      value={p.role}
+                      onValueChange={(value) =>
+                        updateRole.mutate({ userId: p.id, role: value as AppRole })
+                      }
+                      disabled={updateRole.isPending || pendingAction}
+                    >
+                      <SelectTrigger className="w-[120px] shrink-0">
+                        <SelectValue placeholder="Role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {roleOptions.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button
+                          className="p-1.5 rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground transition-colors shrink-0"
+                          aria-label="User actions"
+                        >
+                          <ChevronDown className="size-3.5" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {p.id !== currentUserQ.data?.id && (
+                          <>
+                            <DropdownMenuItem
+                              onClick={() => deactivateUser.mutate(p.id)}
+                              disabled={deactivateUser.isPending || reactivateUser.isPending}
+                              className="flex items-center gap-2 text-destructive focus:text-destructive"
+                            >
+                              <UserX className="size-4" /> Deactivate
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => reactivateUser.mutate(p.id)}
+                              disabled={deactivateUser.isPending || reactivateUser.isPending}
+                              className="flex items-center gap-2 text-green-600 focus:text-green-600"
+                            >
+                              <UserCheck className="size-4" /> Reactivate
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 ))}
           </div>

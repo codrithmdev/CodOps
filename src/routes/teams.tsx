@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { UserPlus, Users, Pencil, Trash2, MoreHorizontal } from "lucide-react";
+import { UserPlus, Users, Pencil, Trash2, MoreHorizontal, UserX } from "lucide-react";
 
 import { PageHeader } from "@/components/page-header";
 import { RolePill } from "@/components/role-pill";
@@ -15,6 +15,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { requireAuth } from "@/lib/auth-guard";
 import { initialsOf } from "@/lib/utils";
 import {
@@ -23,6 +30,8 @@ import {
   useTeams,
   useUpdateTeam,
   useDeleteTeam,
+  useUpdateTeamMemberRole,
+  useRemoveTeamMember,
 } from "@/lib/tasks-api";
 
 export const Route = createFileRoute("/teams")({
@@ -47,6 +56,8 @@ function TeamsPage() {
   const profilesQ = useProfiles();
   const updateTeam = useUpdateTeam();
   const deleteTeam = useDeleteTeam();
+  const updateMemberRole = useUpdateTeamMemberRole();
+  const removeMember = useRemoveTeamMember();
   const [inviteOpen, setInviteOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [editTeam, setEditTeam] = useState<{
@@ -70,6 +81,11 @@ function TeamsPage() {
     if (!confirm("Delete this team? This cannot be undone.")) return;
     deleteTeam.mutate(id);
   };
+
+  const roleOptions = [
+    { value: "member", label: "Member" },
+    { value: "lead", label: "Lead" },
+  ] as const;
 
   return (
     <div className="space-y-6">
@@ -179,7 +195,47 @@ function TeamsPage() {
                           <p className="truncate text-xs font-semibold">{name}</p>
                           <p className="truncate text-[10px] text-muted-foreground">{p?.email}</p>
                         </div>
-                        <RolePill role={m.role_in_team} />
+                        <Select
+                          value={m.role_in_team}
+                          onValueChange={(value) =>
+                            updateMemberRole.mutate({ id: m.id, role: value as "member" | "lead" })
+                          }
+                          disabled={updateMemberRole.isPending}
+                        >
+                          <SelectTrigger className="w-[110px] shrink-0">
+                            <SelectValue placeholder="Role" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {roleOptions.map((opt) => (
+                              <SelectItem key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
+                            >
+                              <UserX className="size-3.5" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => {
+                                if (confirm("Remove this member from the team?")) {
+                                  removeMember.mutate(m.id);
+                                }
+                              }}
+                              className="flex items-center gap-2 text-destructive focus:text-destructive"
+                            >
+                              <UserX className="size-4" /> Remove
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     );
                   })}
