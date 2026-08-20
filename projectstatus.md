@@ -27,7 +27,8 @@ there is no mock data left in the codebase.
 | HR Analytics (`/analytics`)                           | ✅ Done      | `useIndividualPerformance` derived from live profiles + tasks                                            |
 | Admin (`/admin`)                                      | ✅ Done      | Live member roster, role assignment, deactivate/reactivate (server fn), policy toggles (UI-only)        |
 | Role-based access                                      | ✅ Done      | Members/leads restricted to Task Board, Projects, Teams; Dashboard, Analytics and Admin are admin-only (`requireAdmin` + sidebar filtering) |
-| RLS hardening                                         | ✅ Done      | `20260807170000_harden_rls.sql` — role/ownership policies, anon privileges revoked                       |
+| Admin management                                       | ✅ Done      | Admins get full Supabase control: member role change, deactivate/reactivate, permanent member removal, and project create/edit/delete |
+| RLS hardening                                         | ✅ Done      | `20260807170000_harden_rls.sql` — role/ownership policies, anon privileges revoked; `20260820000000_admin_full_control.sql` grants admins INSERT/DELETE on `profiles` |
 | Role management                                       | ✅ Done      | `useUpdateUserRole`, `useUpdateTeamMemberRole`, `useAddTeamMember`, `useRemoveTeamMember`               |
 | Unit tests                                            | 🟡 Partial   | 3 Vitest suites (`aggregations`, `task-ui`, `tasks-api`); no e2e                                        |
 | CI / deployment pipeline                              | ❌ None      | CI workflow was removed; typecheck/lint/build run only on demand                                       |
@@ -103,6 +104,11 @@ Browser ⇄ TanStack Start (SSR) ⇄ Supabase (Postgres + Auth)
 
 ## Recent changes
 
+- 2026-08-18 — Admin full control: admins can now permanently remove any
+  member (deletes the auth account + profile via a server function) and
+  create/edit/delete projects from the Projects page. New migration
+  `20260820000000_admin_full_control.sql` grants admins INSERT/DELETE on
+  `profiles` (must be applied via `supabase db push`).
 - 2026-08-18 — Fixed auth/session bugs: (1) server guard no longer trusts the
   stale cookie over the live bearer token — it tries header → cookie → refresh
   token exchange, eliminating intermittent kicks to `/login`; (2) the session

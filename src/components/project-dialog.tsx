@@ -24,24 +24,34 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { useSaveProject, useTeams, type TeamRow } from "@/lib/tasks-api";
+import type { ProjectStatus } from "@/lib/types";
+import {
+  useSaveProject,
+  useUpdateProject,
+  useTeams,
+  type ProjectRow,
+  type TeamRow,
+} from "@/lib/tasks-api";
 
 const NO_TEAM = "__none__";
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  project?: ProjectRow | null;
 }
 
-export function ProjectDialog({ open, onOpenChange }: Props) {
+export function ProjectDialog({ open, onOpenChange, project = null }: Props) {
   const save = useSaveProject();
+  const update = useUpdateProject();
   const teamsQ = useTeams();
   const teams: TeamRow[] = teamsQ.data ?? [];
+  const editing = project != null;
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [teamId, setTeamId] = useState(NO_TEAM);
-  const [status, setStatus] = useState<"planning" | "active" | "on_hold" | "completed">("planning");
+  const [status, setStatus] = useState<ProjectStatus>("planning");
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [dueDate, setDueDate] = useState<Date | undefined>();
   const [error, setError] = useState<string | null>(null);
@@ -50,39 +60,47 @@ export function ProjectDialog({ open, onOpenChange }: Props) {
   useEffect(() => {
     if (!open) return;
     setError(null);
-    setName("");
-    setDescription("");
-    setTeamId(NO_TEAM);
-    setStatus("planning");
-    setStartDate(undefined);
-    setDueDate(undefined);
-    setStartDateText("");
-  }, [open]);
+    setName(project?.name ?? "");
+    setDescription(project?.description ?? "");
+    setTeamId(project?.team_id ?? NO_TEAM);
+    setStatus(project?.status ?? "planning");
+    setStartDate(project?.start_date ? parseISO(project.start_date) : undefined);
+    setDueDate(project?.due_date ? parseISO(project.due_date) : undefined);
+    setStartDateText(project?.start_date ?? "");
+  }, [open, project]);
 
   const submit = () => {
     if (!name.trim()) {
       setError("Name is required.");
       return;
     }
-    save.mutate(
-      {
-        name: name.trim(),
-        description: description.trim() || null,
-        team_id: teamId === NO_TEAM ? null : teamId,
-        status,
-        start_date: startDate ? format(startDate, "yyyy-MM-dd") : null,
-        due_date: dueDate ? format(dueDate, "yyyy-MM-dd") : null,
-      },
-      { onSuccess: () => onOpenChange(false) },
-    );
+    const values = {
+      name: name.trim(),
+      description: description.trim() || null,
+      team_id: teamId === NO_TEAM ? null : teamId,
+      status,
+      start_date: startDate ? format(startDate, "yyyy-MM-dd") : null,
+      due_date: dueDate ? format(dueDate, "yyyy-MM-dd") : null,
+    };
+    if (editing && project) {
+      update.mutate({ id: project.id, values }, { onSuccess: () => onOpenChange(false) });
+    } else {
+      save.mutate(values, { onSuccess: () => onOpenChange(false) });
+    }
   };
+
+  const busy = save.isPending || update.isPending;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>New project</DialogTitle>
-          <DialogDescription>Create a project and attach it to an owning team.</DialogDescription>
+          <DialogTitle>{editing ? "Edit project" : "New project"}</DialogTitle>
+          <DialogDescription>
+            {editing
+              ? "Update the project details and owning team."
+              : "Create a project and attach it to an owning team."}
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -192,9 +210,15 @@ export function ProjectDialog({ open, onOpenChange }: Props) {
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={submit} disabled={save.isPending} className="glow-primary gap-1.5">
+          <Button onClick={submit} disabled={busy} className="glow-primary gap-1.5">
             <FolderPlus className="size-4" />
-            {save.isPending ? "Creating…" : "Create project"}
+            {busy
+              ? editing
+                ? "Saving…"
+                : "Creating…"
+              : editing
+                ? "Save changes"
+                : "Create project"}
           </Button>
         </DialogFooter>
       </DialogContent>

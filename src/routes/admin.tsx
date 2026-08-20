@@ -1,6 +1,6 @@
 ﻿import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { ShieldCheck, UserX, UserCheck, MoreVertical, Users, Settings } from "lucide-react";
+import { ShieldCheck, UserX, UserCheck, Trash2, MoreVertical, Users, Settings } from "lucide-react";
 
 import { PageHeader } from "@/components/page-header";
 import { RolePill } from "@/components/role-pill";
@@ -18,6 +18,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -37,6 +38,7 @@ import {
   useUpdateUserRole,
   useDeactivateUser,
   useReactivateUser,
+  useDeleteUser,
 } from "@/lib/tasks-api";
 import type { AppRole } from "@/lib/types";
 
@@ -72,10 +74,11 @@ function AdminPage() {
   const updateRole = useUpdateUserRole();
   const deactivateUser = useDeactivateUser();
   const reactivateUser = useReactivateUser();
+  const deleteUser = useDeleteUser();
   const profiles = profilesQ.data ?? [];
 
   const [confirmAction, setConfirmAction] = useState<{
-    type: "deactivate" | "reactivate";
+    type: "deactivate" | "reactivate" | "remove";
     userId: string;
     userName: string;
   } | null>(null);
@@ -117,15 +120,18 @@ function AdminPage() {
     { value: "member", label: "Member" },
   ];
 
-  const pendingAction = deactivateUser.isPending || reactivateUser.isPending;
+  const pendingAction =
+    deactivateUser.isPending || reactivateUser.isPending || deleteUser.isPending;
   const currentUserId = currentUserQ.data?.id;
 
   const handleConfirm = () => {
     if (!confirmAction) return;
     if (confirmAction.type === "deactivate") {
       deactivateUser.mutate(confirmAction.userId);
-    } else {
+    } else if (confirmAction.type === "reactivate") {
       reactivateUser.mutate(confirmAction.userId);
+    } else {
+      deleteUser.mutate(confirmAction.userId);
     }
     setConfirmAction(null);
   };
@@ -244,6 +250,20 @@ function AdminPage() {
                               >
                                 <UserCheck className="size-4" /> Reactivate
                               </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  setConfirmAction({
+                                    type: "remove",
+                                    userId: p.id,
+                                    userName: p.full_name ?? p.email,
+                                  })
+                                }
+                                disabled={pendingAction}
+                                className="flex items-center gap-2 text-destructive focus:text-destructive"
+                              >
+                                <Trash2 className="size-4" /> Remove from workspace
+                              </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         )}
@@ -283,12 +303,18 @@ function AdminPage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {confirmAction?.type === "deactivate" ? "Deactivate user?" : "Reactivate user?"}
+              {confirmAction?.type === "deactivate"
+                ? "Deactivate user?"
+                : confirmAction?.type === "reactivate"
+                  ? "Reactivate user?"
+                  : "Remove member?"}
             </DialogTitle>
             <DialogDescription>
               {confirmAction?.type === "deactivate"
                 ? `Are you sure you want to deactivate ${confirmAction?.userName}? They will lose access to the workspace.`
-                : `Restore access for ${confirmAction?.userName}? They will be able to sign in again.`}
+                : confirmAction?.type === "reactivate"
+                  ? `Restore access for ${confirmAction?.userName}? They will be able to sign in again.`
+                  : `Permanently delete ${confirmAction?.userName}? Their account, profile and memberships will be removed. This cannot be undone.`}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2">
@@ -296,11 +322,15 @@ function AdminPage() {
               Cancel
             </Button>
             <Button
-              variant={confirmAction?.type === "deactivate" ? "destructive" : "default"}
+              variant={confirmAction?.type === "remove" ? "destructive" : "default"}
               onClick={handleConfirm}
               disabled={pendingAction}
             >
-              {confirmAction?.type === "deactivate" ? "Deactivate" : "Reactivate"}
+              {confirmAction?.type === "deactivate"
+                ? "Deactivate"
+                : confirmAction?.type === "reactivate"
+                  ? "Reactivate"
+                  : "Remove member"}
             </Button>
           </DialogFooter>
         </DialogContent>

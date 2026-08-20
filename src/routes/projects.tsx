@@ -1,16 +1,37 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Plus } from "lucide-react";
+import { MoreVertical, Pencil, Plus, Trash2 } from "lucide-react";
 
 import { PageHeader } from "@/components/page-header";
 import { ProjectDialog } from "@/components/project-dialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { requireAuth } from "@/lib/auth-guard";
 import { cn } from "@/lib/utils";
-import { useProjectHealth, useProjects, useTeams } from "@/lib/tasks-api";
+import {
+  useCurrentUser,
+  useDeleteProject,
+  useProjectHealth,
+  useProjects,
+  useTeams,
+  type ProjectRow,
+} from "@/lib/tasks-api";
 import type { ProjectStatus } from "@/lib/types";
 
 export const Route = createFileRoute("/projects")({
@@ -43,13 +64,34 @@ function ProjectsPage() {
   const projectsQ = useProjects();
   const healthQ = useProjectHealth();
   const teamsQ = useTeams();
-  const [createOpen, setCreateOpen] = useState(false);
+  const currentUserQ = useCurrentUser();
+  const deleteProject = useDeleteProject();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState<ProjectRow | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ProjectRow | null>(null);
 
   const projects = projectsQ.data ?? [];
   const healthById = new Map((healthQ.data ?? []).map((h) => [h.project_id, h]));
   const teams = teamsQ.data ?? [];
+  const isAdmin = currentUserQ.data?.role === "admin";
 
   const loading = projectsQ.isLoading || healthQ.isLoading || teamsQ.isLoading;
+
+  const openCreate = () => {
+    setEditingProject(null);
+    setDialogOpen(true);
+  };
+
+  const openEdit = (project: ProjectRow) => {
+    setEditingProject(project);
+    setDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (!deleteTarget) return;
+    deleteProject.mutate(deleteTarget.id);
+    setDeleteTarget(null);
+  };
 
   return (
     <div className="space-y-6">
@@ -57,15 +99,14 @@ function ProjectsPage() {
         title="Projects"
         subtitle="Portfolio delivery across every team in the organization."
         action={
-          <Button
-            onClick={() => setCreateOpen(true)}
-            className="glow-primary shrink-0 gap-1.5 rounded-xl"
-          >
-            <Plus className="size-4" /> New Project
-          </Button>
+          isAdmin ? (
+            <Button onClick={openCreate} className="glow-primary shrink-0 gap-1.5 rounded-xl">
+              <Plus className="size-4" /> New Project
+            </Button>
+          ) : undefined
         }
       />
-      <ProjectDialog open={createOpen} onOpenChange={setCreateOpen} />
+      <ProjectDialog open={dialogOpen} onOpenChange={setDialogOpen} project={editingProject} />
 
       {projectsQ.isError && (
         <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
@@ -102,14 +143,39 @@ function ProjectsPage() {
                     <h2 className="truncate text-base font-bold tracking-tight">{p.name}</h2>
                     <p className="mt-0.5 truncate text-xs text-muted-foreground">{p.description}</p>
                   </div>
-                  <span
-                    className={cn(
-                      "shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase",
-                      statusStyle[p.status],
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className={cn(
+                        "shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase",
+                        statusStyle[p.status],
+                      )}
+                    >
+                      {p.status.replace("_", " ")}
+                    </span>
+                    {isAdmin && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button className="grid size-7 shrink-0 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">
+                            <MoreVertical className="size-4" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-40">
+                          <DropdownMenuItem
+                            onClick={() => openEdit(p)}
+                            className="flex items-center gap-2"
+                          >
+                            <Pencil className="size-4" /> Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => setDeleteTarget(p)}
+                            className="flex items-center gap-2 text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="size-4" /> Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     )}
-                  >
-                    {p.status.replace("_", " ")}
-                  </span>
+                  </div>
                 </div>
 
                 <div className="mt-5">
@@ -132,6 +198,30 @@ function ProjectsPage() {
           })}
         </div>
       )}
+
+      <Dialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete project?</DialogTitle>
+            <DialogDescription>
+              Permanently delete "{deleteTarget?.name}"? All of its tasks will be removed. This
+              cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDelete}
+              disabled={deleteProject.isPending}
+            >
+              {deleteProject.isPending ? "Deleting…" : "Delete project"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

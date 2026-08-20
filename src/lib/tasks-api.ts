@@ -298,6 +298,7 @@ export function useAddTeamMember() {
 }
 
 export type ProjectInsert = Database["public"]["Tables"]["projects"]["Insert"];
+export type ProjectUpdate = Database["public"]["Tables"]["projects"]["Update"];
 
 /** Create a project (RLS-gated to admins and owning team leads). */
 export function useSaveProject() {
@@ -313,6 +314,40 @@ export function useSaveProject() {
     },
     onError: (error) =>
       toast.error("Couldn't create project", { description: (error as Error).message }),
+  });
+}
+
+/** Update a project (RLS-gated to admins and owning team leads). */
+export function useUpdateProject() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, values }: { id: string; values: ProjectUpdate }) => {
+      const { error } = await supabase.from("projects").update(values).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Project updated");
+      qc.invalidateQueries({ queryKey: taskKeys.projects });
+    },
+    onError: (error) =>
+      toast.error("Couldn't update project", { description: (error as Error).message }),
+  });
+}
+
+/** Delete a project (RLS-gated to admins and owning team leads). */
+export function useDeleteProject() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("projects").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Project deleted");
+      qc.invalidateQueries({ queryKey: taskKeys.projects });
+    },
+    onError: (error) =>
+      toast.error("Couldn't delete project", { description: (error as Error).message }),
   });
 }
 
@@ -419,7 +454,7 @@ export function useRemoveTeamMember() {
   });
 }
 
-import { deactivateUser, reactivateUser } from "./admin-functions";
+import { deactivateUser, reactivateUser, deleteUser } from "./admin-functions";
 
 /** Deactivate a user (admin only) - bans the auth account. */
 export function useDeactivateUser() {
@@ -450,5 +485,21 @@ export function useReactivateUser() {
     },
     onError: (error) =>
       toast.error("Couldn't reactivate user", { description: (error as Error).message }),
+  });
+}
+
+/** Permanently remove a member (admin only) - deletes the auth account and profile. */
+export function useDeleteUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (userId: string) => {
+      await deleteUser({ data: { userId } });
+    },
+    onSuccess: () => {
+      toast.success("Member removed");
+      qc.invalidateQueries({ queryKey: taskKeys.profiles });
+    },
+    onError: (error) =>
+      toast.error("Couldn't remove member", { description: (error as Error).message }),
   });
 }

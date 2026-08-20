@@ -25,3 +25,17 @@ export const reactivateUser = createServerFn()
     if (error) throw error;
     return { success: true };
   });
+
+/** Permanently delete a member: removes the auth account and the profile row. */
+export const deleteUser = createServerFn()
+  .validator(userIdSchema)
+  .handler(async ({ data }) => {
+    const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(data.userId);
+    if (authError) throw authError;
+    const { error: profileError } = await supabaseAdmin
+      .from("profiles")
+      .delete()
+      .eq("id", data.userId);
+    if (profileError) throw profileError;
+    return { success: true };
+  });
