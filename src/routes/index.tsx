@@ -14,12 +14,12 @@ import { PageHeader } from "@/components/page-header";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { requireAuth } from "@/lib/auth-guard";
+import { requireAdmin } from "@/lib/auth-guard";
 import { cn } from "@/lib/utils";
 import { useDashboardMetrics, useProjectHealth, useThroughput } from "@/lib/tasks-api";
 
 export const Route = createFileRoute("/")({
-  beforeLoad: requireAuth,
+  beforeLoad: requireAdmin,
   head: () => ({
     meta: [
       { title: "Dashboard — CodOps Task & HR Intelligence" },

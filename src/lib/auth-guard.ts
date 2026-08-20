@@ -59,7 +59,7 @@ const getAuthStatus = createServerFn().handler(async () => {
     (authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : undefined);
 
   if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY || !token) {
-    return { authenticated: false };
+    return { authenticated: false, role: null };
   }
 
   const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
@@ -75,7 +75,17 @@ const getAuthStatus = createServerFn().handler(async () => {
   });
 
   const { data, error } = await supabase.auth.getUser(token);
-  return { authenticated: !error && !!data.user };
+  if (error || !data.user) {
+    return { authenticated: false, role: null };
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", data.user.id)
+    .maybeSingle();
+
+  return { authenticated: true, role: profile?.role ?? null };
 });
 
 /**
@@ -89,5 +99,19 @@ export async function requireAuth() {
   const { authenticated } = await getAuthStatus();
   if (!authenticated) {
     throw redirect({ to: "/login" });
+  }
+}
+
+/**
+ * Admin-only guard. Non-admins are sent back to the Task Board. Members and
+ * leads are restricted to the Task Board, Projects and Teams views.
+ */
+export async function requireAdmin() {
+  const { authenticated, role } = await getAuthStatus();
+  if (!authenticated) {
+    throw redirect({ to: "/login" });
+  }
+  if (role !== "admin") {
+    throw redirect({ to: "/tasks" });
   }
 }

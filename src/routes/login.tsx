@@ -43,7 +43,15 @@ function LoginPage() {
 
   const afterAuth = async () => {
     await qc.invalidateQueries({ queryKey: ["current-user"] });
-    navigate({ to: "/" });
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user?.id ?? "")
+      .maybeSingle();
+    navigate({ to: profile?.role === "admin" ? "/" : "/tasks" });
   };
 
   const onSubmit = async (e: FormEvent) => {

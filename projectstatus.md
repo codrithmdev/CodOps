@@ -25,6 +25,7 @@ there is no mock data left in the codebase.
 | Teams (`/teams`)                                      | ✅ Done      | Live rosters, invite/add member, edit/delete team, member role changes                                  |
 | HR Analytics (`/analytics`)                           | ✅ Done      | `useIndividualPerformance` derived from live profiles + tasks                                            |
 | Admin (`/admin`)                                      | ✅ Done      | Live member roster, role assignment, deactivate/reactivate (server fn), policy toggles (UI-only)        |
+| Role-based access                                      | ✅ Done      | Members/leads restricted to Task Board, Projects, Teams; Dashboard, Analytics and Admin are admin-only (`requireAdmin` + sidebar filtering) |
 | RLS hardening                                         | ✅ Done      | `20260807170000_harden_rls.sql` — role/ownership policies, anon privileges revoked                       |
 | Role management                                       | ✅ Done      | `useUpdateUserRole`, `useUpdateTeamMemberRole`, `useAddTeamMember`, `useRemoveTeamMember`               |
 | Unit tests                                            | 🟡 Partial   | 3 Vitest suites (`aggregations`, `task-ui`, `tasks-api`); no e2e                                        |
@@ -101,9 +102,11 @@ Browser ⇄ TanStack Start (SSR) ⇄ Supabase (Postgres + Auth)
 
 ## Recent changes
 
-- 2026-08-18 — Removed the Kanban Board: deleted the `/board` route and
-  `kanban-board.tsx`, dropped the sidebar entry and the dashboard's "Active
-  Board" section, and regenerated the route tree.
+- 2026-08-18 — Role-based access control: members and leads now only see the
+  Task Board, Projects and Teams. Dashboard, HR Analytics and Admin Controls
+  are admin-only (`requireAdmin` guard + role-filtered sidebar); non-admins
+  land on `/tasks` after sign-in. Added after removing the Kanban Board
+  (`/board` route, `kanban-board.tsx`, sidebar entry, dashboard section).
 - 2026-08-18 — (this update) Full data wiring complete: mock data removed;
   auth UX shipped (login/reset-password, session cookie, `requireAuth`
   guards); RLS hardened; admin role management + deactivate/reactivate added;

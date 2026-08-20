@@ -188,7 +188,7 @@ function AuthGate() {
     if (!user && pathname !== "/login" && pathname !== "/reset-password") {
       navigate({ to: "/login" });
     } else if (user && (pathname === "/login" || pathname === "/reset-password")) {
-      navigate({ to: "/" });
+      navigate({ to: user.role === "admin" ? "/" : "/tasks" });
     }
   }, [mounted, isPending, user, pathname, navigate]);
 

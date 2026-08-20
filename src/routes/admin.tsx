@@ -29,7 +29,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { requireAuth } from "@/lib/auth-guard";
+import { requireAdmin } from "@/lib/auth-guard";
 import { initialsOf } from "@/lib/utils";
 import {
   useCurrentUser,
@@ -41,7 +41,7 @@ import {
 import type { AppRole } from "@/lib/types";
 
 export const Route = createFileRoute("/admin")({
-  beforeLoad: requireAuth,
+  beforeLoad: requireAdmin,
   head: () => ({
     meta: [
       { title: "Admin Controls — CodOps" },

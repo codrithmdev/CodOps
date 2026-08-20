@@ -28,10 +28,10 @@ import { useCurrentUser } from "@/lib/tasks-api";
 import { ROLE_LABEL } from "@/lib/types";
 
 const nav: { title: string; url: string; icon: typeof LayoutDashboard; exact?: boolean }[] = [
-  { title: "Dashboard", url: "/", icon: LayoutDashboard, exact: true },
   { title: "Task Board", url: "/tasks", icon: ListChecks },
   { title: "Projects", url: "/projects", icon: FolderKanban },
   { title: "Teams", url: "/teams", icon: Users },
+  { title: "Dashboard", url: "/", icon: LayoutDashboard, exact: true },
   { title: "HR Analytics", url: "/analytics", icon: TrendingUp },
   { title: "Admin Controls", url: "/admin", icon: Settings2 },
 ];
@@ -45,6 +45,11 @@ export function AppSidebar() {
   const name = currentUser?.full_name ?? "Workspace";
   const role = currentUser?.role ?? "member";
   const initials = initialsOf(name);
+
+  const visibleNav =
+    role === "admin"
+      ? nav
+      : nav.filter((i) => i.url === "/tasks" || i.url === "/projects" || i.url === "/teams");
 
   const isActive = (url: string, exact?: boolean) =>
     exact ? pathname === url : pathname.startsWith(url);
@@ -75,7 +80,7 @@ export function AppSidebar() {
           )}
           <SidebarGroupContent>
             <SidebarMenu>
-              {nav.map((item) => {
+              {visibleNav.map((item) => {
                 const active = isActive(item.url, item.exact);
                 return (
                   <SidebarMenuItem key={item.title}>
