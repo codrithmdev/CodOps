@@ -11,7 +11,6 @@ import {
 } from "recharts";
 
 import { PageHeader } from "@/components/page-header";
-import { KanbanBoard } from "@/components/kanban-board";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -242,14 +241,6 @@ function Dashboard() {
             )}
           </div>
         </Card>
-      </section>
-
-      <section>
-        <div className="mb-3 flex items-baseline justify-between gap-3">
-          <h2 className="text-sm font-bold tracking-tight">Active Board</h2>
-          <p className="text-xs text-muted-foreground">Live snapshot from tasks</p>
-        </div>
-        <KanbanBoard />
       </section>
     </div>
   );

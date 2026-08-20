@@ -1,34 +1,36 @@
 # Project Status — CodOps
 
 > Status document for **CodOps — Team Tasks & HR Analytics**.
-> Last updated: 2026-08-07. Keep this file in sync with significant changes.
+> Last updated: 2026-08-18. Keep this file in sync with significant changes.
 
 ## Overview
 
 CodOps is a full-stack team task management and HR analytics workspace. The
 front end is a TanStack Start (React 19) SSR application; the data layer is
-Supabase (Postgres). The app is currently in **early functional stage**: the UI
-surface is complete across seven routes, but only the Task Board is wired to
-real Supabase data — the remaining views render seeded mock data.
+Supabase (Postgres + Auth). The app is now **fully wired to real Supabase
+data**: every route renders live queries (React Query) and the entire surface
+sits behind a real sign-in flow. `src/lib/mock-data.ts` no longer exists —
+there is no mock data left in the codebase.
 
 ## Current status
 
-| Area                                                  | Status       | Notes                                                                                                            |
-| ----------------------------------------------------- | ------------ | ---------------------------------------------------------------------------------------------------------------- |
-| App shell (sidebar, header, command palette, theming) | ✅ Done      | Responsive, collapsible sidebar, ⌘K palette, dark/light                                                          |
-| Task Board (`/tasks`)                                 | ✅ Done      | Live Supabase CRUD, optimistic drag-and-drop, filters, task dialog                                               |
-| Kanban Board (`/board`)                               | ⚠️ Mock data | `src/components/kanban-board.tsx` reads `src/lib/mock-data.ts`                                                   |
-| Dashboard (`/`)                                       | ⚠️ Mock data | Metrics, throughput chart, project health from mock data                                                         |
-| Projects (`/projects`)                                | ⚠️ Mock data | Cards render `projects`/`projectHealth` from mock data                                                           |
-| Teams (`/teams`)                                      | ⚠️ Mock data | Rosters from `teamMembers`/`profiles` mock data                                                                  |
-| HR Analytics (`/analytics`)                           | ⚠️ Mock data | `individualPerformance` from mock data                                                                           |
-| Admin (`/admin`)                                      | ⚠️ Mock data | Profiles/policies are hard-coded                                                                                 |
-| Supabase schema + seed                                | ✅ Done      | `supabase/migrations/…sql` — enums, 5 tables, RLS, seed                                                          |
-| Auth wiring                                           | 🟡 Partial   | Middleware exists (`requireSupabaseAuth`, `attachSupabaseAuth`) but no login UI; no route is currently protected |
-| SSR error handling                                    | ✅ Done      | `src/server.ts` + `src/lib/error-capture.ts` render friendly 500s                                                |
-| Error reporting                                       | ✅ Done      | Client error boundaries + server error normalization                                                             |
+| Area                                                  | Status       | Notes                                                                                                   |
+| ----------------------------------------------------- | ------------ | ------------------------------------------------------------------------------------------------------- |
+| App shell (sidebar, header, command palette, theming) | ✅ Done      | Responsive, collapsible sidebar, ⌘K palette, dark/light                                                 |
+| Auth UX (`/login`, `/reset-password`)                 | ✅ Done      | Sign in / sign up / forgot-password / email confirmation; session cookie (`codops-session`) sync        |
+| Route protection                                      | ✅ Done      | `requireAuth` guard in `src/lib/auth-guard.ts` on every workspace route; `AuthGate` client redirect     |
+| Task Board (`/tasks`)                                 | ✅ Done      | Live Supabase CRUD, optimistic drag-and-drop, filters, task dialog                                      |
+| Dashboard (`/`)                                       | ✅ Done      | Live metrics, throughput chart, project health (`useDashboardMetrics`, `useThroughput`, `useProjectHealth`) |
+| Projects (`/projects`)                                | ✅ Done      | Live projects + derived health, create dialog (admin/lead gated by RLS)                                 |
+| Teams (`/teams`)                                      | ✅ Done      | Live rosters, invite/add member, edit/delete team, member role changes                                  |
+| HR Analytics (`/analytics`)                           | ✅ Done      | `useIndividualPerformance` derived from live profiles + tasks                                            |
+| Admin (`/admin`)                                      | ✅ Done      | Live member roster, role assignment, deactivate/reactivate (server fn), policy toggles (UI-only)        |
+| RLS hardening                                         | ✅ Done      | `20260807170000_harden_rls.sql` — role/ownership policies, anon privileges revoked                       |
+| Role management                                       | ✅ Done      | `useUpdateUserRole`, `useUpdateTeamMemberRole`, `useAddTeamMember`, `useRemoveTeamMember`               |
+| Unit tests                                            | 🟡 Partial   | 3 Vitest suites (`aggregations`, `task-ui`, `tasks-api`); no e2e                                        |
+| CI / deployment pipeline                              | ❌ None      | CI workflow was removed; typecheck/lint/build run only on demand                                       |
 
-**Legend:** ✅ complete · 🟡 partial / wired but not fully exposed · ⚠️ mock data / needs wiring
+**Legend:** ✅ complete · 🟡 partial / present but not fully covered · ❌ missing
 
 ## Architecture
 
@@ -38,57 +40,98 @@ Browser ⇄ TanStack Start (SSR) ⇄ Supabase (Postgres + Auth)
         └─ TanStack Query (server-state in src/lib/tasks-api.ts)
 ```
 
-- **Routing**: file-based; `src/routes/__root.tsx` is the app shell, `routeTree.gen.ts` is generated.
-- **Server entry**: `src/start.ts` registers middleware (Supabase auth attach, error, CSRF); `src/server.ts` wraps the Nitro/TanStack server entry with catastrophic-error handling.
-- **Data access**: `src/lib/tasks-api.ts` exposes TanStack Query hooks (`useTasks`, `useProjects`, `useProfiles`, `useTeams`, `useSaveTask`, `useUpdateTaskStatus`, `useDeleteTask`) over the Supabase client (`src/integrations/supabase/client.ts`).
-- **Types**: DB row types are generated in `src/integrations/supabase/types.ts`; UI-facing types mirror them in `src/lib/types.ts`.
-- **UI**: shadcn/ui-style components (`src/components/ui/`), Tailwind v4 design tokens in `src/styles.css` (oklch, `dark` variant), lucide icons, Recharts for analytics.
+- **Routing**: file-based; `src/routes/__root.tsx` is the app shell (sidebar,
+  header, `AuthGate`), `routeTree.gen.ts` is generated.
+- **Auth**: `src/lib/auth-guard.ts` validates the `codops-session` cookie /
+  bearer token server-side and redirects unauthenticated users to `/login`;
+  `src/routes/__root.tsx` syncs the Supabase session to that cookie and
+  `AuthGate` handles client-side redirects.
+- **Data access**: `src/lib/tasks-api.ts` exposes React Query hooks for every
+  table and several derived metrics (`useDashboardMetrics`, `useThroughput`,
+  `useProjectHealth`, `useIndividualPerformance`) computed in
+  `src/lib/aggregations.ts`. Components never call Supabase directly.
+- **Admin actions**: `src/lib/admin-functions.ts` runs server-side functions
+  against `supabaseAdmin` (`client.server.ts`) to ban/unban auth accounts.
+- **Types**: DB row types are generated in
+  `src/integrations/supabase/types.ts`; UI-facing types mirror them in
+  `src/lib/types.ts`.
+- **UI**: shadcn/ui-style components (`src/components/ui/`), Tailwind v4
+  design tokens in `src/styles.css` (oklch, `dark` variant), lucide icons,
+  Recharts for analytics.
 
 ## Database schema (`supabase/migrations/`)
 
-- Enums: `app_role` (`admin|lead|member`), `task_priority`, `task_status`, `project_status`
-- Tables:
-  - `profiles` — workspace members, role
-  - `teams` — teams
-  - `team_members` — membership + role-in-team (unique `(team_id, user_id)`)
-  - `projects` — projects, owning team, dates, status
-  - `tasks` — title, project, assignee, creator, priority, status, due date, completed_at
-- Triggers: `set_updated_at()` keeps `updated_at` fresh
-- Security: RLS enabled with an **open workspace access** policy (`USING (true)`) for `anon`/`authenticated` — suitable for demo/prototype, **needs tightening before production**
-- Seed: 5 profiles, 3 teams, 7 memberships, 3 projects, 12 tasks
+- `20260807114326_…` — enums (`app_role`, `task_priority`, `task_status`,
+  `project_status`), 5 tables, `set_updated_at()` trigger, seed data.
+- `20260807160000_link_auth_to_profiles.sql` — links Supabase Auth users to
+  `profiles`.
+- `20260807170000_harden_rls.sql` — replaces the open workspace policies:
+  - Helpers `is_workspace_admin()` / `is_team_lead()` (SECURITY DEFINER).
+  - `anon` privileges revoked from all tables.
+  - `profiles`: all members read; update self or admin.
+  - `teams`: all read; create/edit/delete admin-only.
+  - `team_members`: all read; write admin or owning team lead.
+  - `projects`: all read; write admin or owning team lead.
+  - `tasks`: all members read/create/update; delete admin-only. (Any member
+    can move a card — acceptable for now, noted as a tightening target.)
+- Note: `supabase/seed.sql` does not exist; seed lives in the initial
+  migration. `supabase/config.toml` still points at project ref
+  `sitjxrepzfwakpgbxqjw` — confirm before `supabase db push`.
 
 ## Known gaps & risks
 
-1. **Mock data coverage** — only `/tasks` talks to Supabase. Dashboards, kanban, projects, teams, analytics and admin need to be ported to real queries (queries already exist for tasks/projects/profiles/teams).
-2. **No auth UX** — `requireSupabaseAuth` middleware exists but no route uses it and there is no sign-in/sign-up flow. Sessions are not enforced anywhere.
-3. **RLS is wide open** — the migration grants `SELECT/INSERT/UPDATE/DELETE` to `anon` with open policies. Fine for demos; must be replaced with ownership/role-based policies for real use.
-4. **No tests** — no unit/integration/e2e suites exist. Highest-risk areas: drag-and-drop mutations, task dialog form, SSR error path.
-5. **No CI** — no pipeline runs typecheck/lint/build on push.
-6. **`.env` was removed** — credentials must be re-provisioned (see `.env.example`); the app throws a clear error until `VITE_SUPABASE_URL` / `VITE_SUPABASE_PUBLISHABLE_KEY` are set.
-7. **Supabase project ref** — `supabase/config.toml` points at `sitjxrepzfwakpgbxqjw`; confirm this is the intended project before `supabase db push`.
-8. **Analytics are illustrative** — HR evaluation metrics (`v_individual_performance`-style data) are mocked; no real evaluation model exists yet.
+1. **Admin policies are UI-only** — the toggles in the Admin → Policies card
+   are hard-coded (`admin.tsx`) and not persisted anywhere.
+2. **No CI** — the workflow was intentionally removed; nothing runs
+   typecheck/lint/test/build on push.
+3. **Test coverage is unit-only** — 3 Vitest suites exist; no integration or
+   e2e coverage (highest-risk areas: drag-and-drop mutations, auth redirects,
+   SSR error path).
+4. **Tasks writes are open to all members** — `tasks_update`/`tasks_insert`
+   have no ownership/assignee scoping (per migration comment). Tighten when
+   per-task ownership is required.
+5. **HR evaluation metrics are derived, not authored** — analytics aggregates
+   the live `tasks` table; there is still no formal evaluation model.
+6. **Email flows depend on the Supabase project** — sign-up confirmation and
+   password reset require email provider settings in the Supabase project.
+7. **`.env` is gitignored** — must be provisioned locally (see `.env.example`)
+   for `VITE_SUPABASE_URL` / `VITE_SUPABASE_PUBLISHABLE_KEY`.
+8. **Node 22+ required** — `package.json` `engines` pins `>=22`; the lockfile
+   was regenerated for Node 22.
 
 ## Recent changes
 
-- 2026-08-07 — Removed all Lovable scaffolding: replaced `@lovable.dev/vite-tanstack-config` with a standard TanStack Start Vite config, removed Lovable error reporting, updated AGENTS.md, README.md, and scrubbed the lockfile. Created this status document.
+- 2026-08-18 — Removed the Kanban Board: deleted the `/board` route and
+  `kanban-board.tsx`, dropped the sidebar entry and the dashboard's "Active
+  Board" section, and regenerated the route tree.
+- 2026-08-18 — (this update) Full data wiring complete: mock data removed;
+  auth UX shipped (login/reset-password, session cookie, `requireAuth`
+  guards); RLS hardened; admin role management + deactivate/reactivate added;
+  3 Vitest suites added; CI workflow removed.
+- 2026-08-07 — Removed Lovable scaffolding (standard TanStack Start Vite
+  config, scrubbed lockfile), updated docs, created this status document.
 
 ## Roadmap
 
-1. Port remaining views (dashboard, kanban, projects, teams, analytics, admin) from mock data to Supabase queries + React Query.
-2. Add authentication UX (sign in/up with Supabase Auth) and protect routes with `requireSupabaseAuth`.
-3. Harden RLS: ownership-based policies per role; drop `anon` write access.
-4. Add tests: Vitest for `src/lib` (task-ui, tasks-api mocks), plus a smoke test for the SSR error path.
-5. Add CI (typecheck → lint → build) and a deployment pipeline (Nitro preset).
-6. Define the HR evaluation model and views backed by real data.
-7. Onboarding polish: loading skeletons for all data-driven views, empty states, optimistic UI everywhere.
+1. Persist admin policies (new table + UI wiring) instead of hard-coded toggles.
+2. Tighten `tasks` RLS to assignee/owner/lead writes.
+3. Restore a CI pipeline (typecheck → lint → test → build) and add a
+   deployment preset (Nitro).
+4. Add integration/e2e coverage for drag-and-drop, auth redirects, and the SSR
+   error path.
+5. Define a real HR evaluation model and author evaluation data.
+6. Onboarding polish: more loading skeletons, empty states, optimistic UI
+   coverage everywhere.
 
 ## How to verify the app works
 
 ```sh
-npm install          # first time
+npm install          # first time (Node 22+)
 npm run dev          # dev server (SSR)
-# open the printed URL, browse /tasks — CRUD + drag-and-drop hit Supabase
+# open the printed URL → you'll be redirected to /login → sign up/in
+# browse /tasks — CRUD + drag-and-drop hit Supabase
 npm run build        # production build sanity check
 npm run lint         # lint
+npm test             # Vitest unit suites
 npx tsc --noEmit     # typecheck
 ```

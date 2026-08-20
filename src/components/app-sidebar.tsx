@@ -1,7 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard,
-  KanbanSquare,
   ListChecks,
   FolderKanban,
   Users,
@@ -30,7 +29,6 @@ import { ROLE_LABEL } from "@/lib/types";
 
 const nav: { title: string; url: string; icon: typeof LayoutDashboard; exact?: boolean }[] = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard, exact: true },
-  { title: "Kanban Board", url: "/board", icon: KanbanSquare },
   { title: "Task Board", url: "/tasks", icon: ListChecks },
   { title: "Projects", url: "/projects", icon: FolderKanban },
   { title: "Teams", url: "/teams", icon: Users },
