@@ -3,6 +3,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
+import { SESSION_COOKIE, parseSessionCookie } from "@/lib/session-cookie";
 
 function isNewSupabaseApiKey(value: string): boolean {
   return value.startsWith("sb_publishable_") || value.startsWith("sb_secret_");
@@ -44,8 +45,6 @@ function parseCookies(cookieHeader: string | null | undefined): Record<string, s
   return out;
 }
 
-const SESSION_COOKIE = "codops-session";
-
 const getAuthStatus = createServerFn().handler(async () => {
   const SUPABASE_URL = process.env["VITE_SUPABASE_URL"] || process.env["SUPABASE_URL"];
   const SUPABASE_PUBLISHABLE_KEY =
@@ -53,39 +52,74 @@ const getAuthStatus = createServerFn().handler(async () => {
 
   const request = getRequest();
   const cookies = parseCookies(request?.headers?.get("cookie"));
+  const cookieSession = parseSessionCookie(cookies[SESSION_COOKIE]);
   const authHeader = request?.headers?.get("authorization");
-  const token =
-    cookies[SESSION_COOKIE] ||
-    (authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : undefined);
+  const headerToken = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : undefined;
 
-  if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY || !token) {
+  if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
     return { authenticated: false, role: null };
   }
 
-  const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-    global: {
-      fetch: createSupabaseFetch(SUPABASE_PUBLISHABLE_KEY),
-      headers: { Authorization: `Bearer ${token}` },
-    },
-    auth: {
-      storage: undefined,
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-  });
+  const makeClient = (accessToken: string) =>
+    createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+      global: {
+        fetch: createSupabaseFetch(SUPABASE_PUBLISHABLE_KEY),
+        headers: { Authorization: `Bearer ${accessToken}` },
+      },
+      auth: {
+        storage: undefined,
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    });
 
-  const { data, error } = await supabase.auth.getUser(token);
-  if (error || !data.user) {
-    return { authenticated: false, role: null };
+  const verifyToken = async (accessToken: string) => {
+    if (!accessToken) return null;
+    const client = makeClient(accessToken);
+    const { data, error } = await client.auth.getUser(accessToken);
+    if (error || !data.user) return null;
+    const { data: profile } = await client
+      .from("profiles")
+      .select("role")
+      .eq("id", data.user.id)
+      .maybeSingle();
+    return { authenticated: true as const, role: profile?.role ?? null };
+  };
+
+  // 1. The live session token attached by the client middleware — freshest source.
+  const fromHeader = headerToken ? await verifyToken(headerToken) : null;
+  if (fromHeader) return fromHeader;
+
+  // 2. The access token persisted in the session cookie.
+  if (cookieSession.accessToken && cookieSession.accessToken !== headerToken) {
+    const fromCookie = await verifyToken(cookieSession.accessToken);
+    if (fromCookie) return fromCookie;
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", data.user.id)
-    .maybeSingle();
+  // 3. Exchange the refresh token for a fresh session (expired access token).
+  if (cookieSession.refreshToken) {
+    const client = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+      global: { fetch: createSupabaseFetch(SUPABASE_PUBLISHABLE_KEY) },
+      auth: {
+        storage: undefined,
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    });
+    const { data, error } = await client.auth.refreshSession({
+      refresh_token: cookieSession.refreshToken,
+    });
+    if (!error && data.user) {
+      const { data: profile } = await client
+        .from("profiles")
+        .select("role")
+        .eq("id", data.user.id)
+        .maybeSingle();
+      return { authenticated: true, role: profile?.role ?? null };
+    }
+  }
 
-  return { authenticated: true, role: profile?.role ?? null };
+  return { authenticated: false, role: null };
 });
 
 /**

@@ -1,4 +1,4 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import {
   Outlet,
   Link,
@@ -20,16 +20,47 @@ import { CommandPalette, useCommandPalette } from "@/components/command-palette"
 import { useCurrentUser } from "@/lib/tasks-api";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { syncSessionCookie } from "@/lib/session-cookie";
 
-const SESSION_COOKIE = "codops-session";
-const SESSION_COOKIE_AGE = 60 * 60 * 24 * 7; // 7 days
+const IDLE_TIMEOUT_MS = 5 * 60 * 1000; // auto-logout after 5 minutes of inactivity
+const IDLE_CHECK_INTERVAL_MS = 15_000;
 
-function syncSessionCookie(token: string | null | undefined) {
-  if (typeof document === "undefined") return;
-  const secure = window.location.protocol === "https:" ? "; Secure" : "";
-  document.cookie = `${SESSION_COOKIE}=${token ?? ""}; path=/; max-age=${
-    token ? SESSION_COOKIE_AGE : 0
-  }; samesite=lax${secure}`;
+function useAutoLogout(enabled: boolean) {
+  const navigate = useNavigate();
+  const qc = useQueryClient();
+  const { data: user } = useCurrentUser({ enabled });
+
+  useEffect(() => {
+    if (!user) return;
+
+    let lastActivity = Date.now();
+    const onActivity = () => {
+      lastActivity = Date.now();
+    };
+    const events: (keyof WindowEventMap)[] = [
+      "mousemove",
+      "mousedown",
+      "keydown",
+      "touchstart",
+      "scroll",
+    ];
+    events.forEach((e) => window.addEventListener(e, onActivity, { passive: true }));
+
+    const timer = setInterval(() => {
+      if (Date.now() - lastActivity >= IDLE_TIMEOUT_MS) {
+        supabase.auth.signOut().then(() => {
+          syncSessionCookie(null);
+          qc.clear();
+          navigate({ to: "/login" });
+        });
+      }
+    }, IDLE_CHECK_INTERVAL_MS);
+
+    return () => {
+      clearInterval(timer);
+      events.forEach((e) => window.removeEventListener(e, onActivity));
+    };
+  }, [user, navigate, qc]);
 }
 
 function NotFoundComponent() {
@@ -143,33 +174,52 @@ function RootComponent() {
 
   useEffect(() => {
     const { data } = supabase.auth.onAuthStateChange((_event, session) => {
-      syncSessionCookie(session?.access_token);
+      syncSessionCookie(session);
     });
     // Seed the cookie from the persisted session on first load.
     supabase.auth.getSession().then(({ data: sessionData }) => {
-      syncSessionCookie(sessionData.session?.access_token);
+      syncSessionCookie(sessionData.session);
     });
     return () => data.subscription.unsubscribe();
   }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
-      <SidebarProvider>
-        <div className="flex min-h-screen w-full bg-background">
-          {isAuthPage ? null : <AppSidebar />}
-          <div className="flex min-w-0 flex-1 flex-col">
-            {isAuthPage ? null : <AppHeader onCommand={() => setOpen(true)} />}
-            <main className={cn("flex min-w-0 flex-1 flex-col p-4 sm:p-6", isAuthPage && "p-0")}>
-              {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-              <Outlet />
-              <AuthGate />
-            </main>
-          </div>
-        </div>
-        {isAuthPage ? null : <CommandPalette open={open} onOpenChange={setOpen} />}
-        <Toaster />
-      </SidebarProvider>
+      <AppShell isAuthPage={isAuthPage} open={open} onOpenChange={setOpen} />
     </QueryClientProvider>
+  );
+}
+
+function AppShell({
+  isAuthPage,
+  open,
+  onOpenChange,
+}: {
+  isAuthPage: boolean;
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+}) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  useAutoLogout(mounted);
+
+  return (
+    <SidebarProvider>
+      <div className="flex min-h-screen w-full bg-background">
+        {isAuthPage ? null : <AppSidebar />}
+        <div className="flex min-w-0 flex-1 flex-col">
+          {isAuthPage ? null : <AppHeader onCommand={() => onOpenChange(true)} />}
+          <main className={cn("flex min-w-0 flex-1 flex-col p-4 sm:p-6", isAuthPage && "p-0")}>
+            {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+            <Outlet />
+            <AuthGate />
+          </main>
+        </div>
+      </div>
+      {isAuthPage ? null : <CommandPalette open={open} onOpenChange={onOpenChange} />}
+      <Toaster />
+    </SidebarProvider>
   );
 }
 
@@ -187,7 +237,7 @@ function AuthGate() {
     if (!mounted || isPending) return;
     if (!user && pathname !== "/login" && pathname !== "/reset-password") {
       navigate({ to: "/login" });
-    } else if (user && (pathname === "/login" || pathname === "/reset-password")) {
+    } else if (user && pathname === "/login") {
       navigate({ to: user.role === "admin" ? "/" : "/tasks" });
     }
   }, [mounted, isPending, user, pathname, navigate]);

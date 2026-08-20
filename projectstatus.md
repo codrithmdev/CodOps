@@ -18,6 +18,7 @@ there is no mock data left in the codebase.
 | ----------------------------------------------------- | ------------ | ------------------------------------------------------------------------------------------------------- |
 | App shell (sidebar, header, command palette, theming) | ✅ Done      | Responsive, collapsible sidebar, ⌘K palette, dark/light                                                 |
 | Auth UX (`/login`, `/reset-password`)                 | ✅ Done      | Sign in / sign up / forgot-password / email confirmation; session cookie (`codops-session`) sync        |
+| Session handling                                       | ✅ Done      | Server guard prefers live bearer token, falls back to cookie, refreshes via refresh token; auto-logout after 5 min idle |
 | Route protection                                      | ✅ Done      | `requireAuth` guard in `src/lib/auth-guard.ts` on every workspace route; `AuthGate` client redirect     |
 | Task Board (`/tasks`)                                 | ✅ Done      | Live Supabase CRUD, optimistic drag-and-drop, filters, task dialog                                      |
 | Dashboard (`/`)                                       | ✅ Done      | Live metrics, throughput chart, project health (`useDashboardMetrics`, `useThroughput`, `useProjectHealth`) |
@@ -102,6 +103,13 @@ Browser ⇄ TanStack Start (SSR) ⇄ Supabase (Postgres + Auth)
 
 ## Recent changes
 
+- 2026-08-18 — Fixed auth/session bugs: (1) server guard no longer trusts the
+  stale cookie over the live bearer token — it tries header → cookie → refresh
+  token exchange, eliminating intermittent kicks to `/login`; (2) the session
+  cookie now stores access + refresh tokens via `src/lib/session-cookie.ts`;
+  (3) added auto-logout after 5 minutes of inactivity; (4) fixed the AuthGate
+  redirect that broke the `/reset-password` recovery flow; (5) sign-out now
+  clears the session cookie.
 - 2026-08-18 — Role-based access control: members and leads now only see the
   Task Board, Projects and Teams. Dashboard, HR Analytics and Admin Controls
   are admin-only (`requireAdmin` guard + role-filtered sidebar); non-admins

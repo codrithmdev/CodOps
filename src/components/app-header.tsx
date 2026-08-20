@@ -17,6 +17,7 @@ import { RolePill } from "@/components/role-pill";
 import { initialsOf } from "@/lib/utils";
 import { useCurrentUser } from "@/lib/tasks-api";
 import { supabase } from "@/integrations/supabase/client";
+import { syncSessionCookie } from "@/lib/session-cookie";
 import { toast } from "sonner";
 
 function useTheme() {
@@ -40,6 +41,7 @@ export function AppHeader({ onCommand }: { onCommand: () => void }) {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
+    syncSessionCookie(null);
     qc.clear();
     navigate({ to: "/login" });
   };
