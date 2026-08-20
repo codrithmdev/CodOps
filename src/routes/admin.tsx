@@ -1,6 +1,15 @@
-﻿import { useState } from "react";
+﻿import { useState, type FormEvent } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { ShieldCheck, UserX, UserCheck, Trash2, MoreVertical, Users, Settings } from "lucide-react";
+import {
+  Mail,
+  ShieldCheck,
+  UserX,
+  UserCheck,
+  Trash2,
+  MoreVertical,
+  Users,
+  Settings,
+} from "lucide-react";
 
 import { PageHeader } from "@/components/page-header";
 import { RolePill } from "@/components/role-pill";
@@ -29,6 +38,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { requireAdmin } from "@/lib/auth-guard";
 import { initialsOf } from "@/lib/utils";
@@ -39,6 +50,7 @@ import {
   useDeactivateUser,
   useReactivateUser,
   useDeleteUser,
+  useInviteUser,
 } from "@/lib/tasks-api";
 import type { AppRole } from "@/lib/types";
 
@@ -75,6 +87,7 @@ function AdminPage() {
   const deactivateUser = useDeactivateUser();
   const reactivateUser = useReactivateUser();
   const deleteUser = useDeleteUser();
+  const inviteUser = useInviteUser();
   const profiles = profilesQ.data ?? [];
 
   const [confirmAction, setConfirmAction] = useState<{
@@ -82,6 +95,24 @@ function AdminPage() {
     userId: string;
     userName: string;
   } | null>(null);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState<AppRole>("member");
+
+  const submitInvite = (e: FormEvent) => {
+    e.preventDefault();
+    if (!inviteEmail.trim()) return;
+    inviteUser.mutate(
+      { email: inviteEmail.trim(), role: inviteRole },
+      {
+        onSuccess: () => {
+          setInviteOpen(false);
+          setInviteEmail("");
+          setInviteRole("member");
+        },
+      },
+    );
+  };
 
   if (currentUserQ.isPending) {
     return (
@@ -160,6 +191,14 @@ function AdminPage() {
               <h2 className="text-sm font-semibold tracking-tight">Members</h2>
               <p className="text-xs text-muted-foreground">{profiles.length} total</p>
             </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="ml-auto shrink-0 gap-1.5 rounded-lg"
+              onClick={() => setInviteOpen(true)}
+            >
+              <Mail className="size-3.5" /> Invite member
+            </Button>
           </div>
 
           <div className="divide-y divide-border">
@@ -333,6 +372,57 @@ function AdminPage() {
                   : "Remove member"}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Invite a member</DialogTitle>
+            <DialogDescription>
+              Send an email invitation. They'll set their own password and join the workspace.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={submitInvite} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="invite-email">Email address</Label>
+              <Input
+                id="invite-email"
+                type="email"
+                required
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                placeholder="you@codops.io"
+                className="rounded-xl"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Role</Label>
+              <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as AppRole)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="lead">Team Lead</SelectItem>
+                  <SelectItem value="member">Member</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <DialogFooter className="gap-2">
+              <Button type="button" variant="outline" onClick={() => setInviteOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={inviteUser.isPending}
+                className="glow-primary gap-1.5"
+              >
+                <Mail className="size-4" />
+                {inviteUser.isPending ? "Sending…" : "Send invitation"}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </div>

@@ -454,7 +454,7 @@ export function useRemoveTeamMember() {
   });
 }
 
-import { deactivateUser, reactivateUser, deleteUser } from "./admin-functions";
+import { deactivateUser, reactivateUser, deleteUser, inviteUser } from "./admin-functions";
 
 /** Deactivate a user (admin only) - bans the auth account. */
 export function useDeactivateUser() {
@@ -501,5 +501,21 @@ export function useDeleteUser() {
     },
     onError: (error) =>
       toast.error("Couldn't remove member", { description: (error as Error).message }),
+  });
+}
+
+/** Invite a new member by email (admin only) - they set a password at /invite. */
+export function useInviteUser() {
+  return useMutation({
+    mutationFn: async (input: { email: string; role: AppRoleDb }) => {
+      await inviteUser({ data: input });
+    },
+    onSuccess: () => {
+      toast.success("Invitation sent", {
+        description: "The invite email is on its way to their inbox.",
+      });
+    },
+    onError: (error) =>
+      toast.error("Couldn't send invitation", { description: (error as Error).message }),
   });
 }

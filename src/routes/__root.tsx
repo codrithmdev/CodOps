@@ -170,7 +170,8 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const { open, setOpen } = useCommandPalette();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const isAuthPage = pathname === "/login" || pathname === "/reset-password";
+  const isAuthPage =
+    pathname === "/login" || pathname === "/reset-password" || pathname === "/invite";
 
   useEffect(() => {
     const { data } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -235,7 +236,12 @@ function AuthGate() {
 
   useEffect(() => {
     if (!mounted || isPending) return;
-    if (!user && pathname !== "/login" && pathname !== "/reset-password") {
+    if (
+      !user &&
+      pathname !== "/login" &&
+      pathname !== "/reset-password" &&
+      pathname !== "/invite"
+    ) {
       navigate({ to: "/login" });
     } else if (user && pathname === "/login") {
       navigate({ to: user.role === "admin" ? "/" : "/tasks" });

@@ -27,7 +27,7 @@ there is no mock data left in the codebase.
 | HR Analytics (`/analytics`)                           | ✅ Done      | `useIndividualPerformance` derived from live profiles + tasks                                            |
 | Admin (`/admin`)                                      | ✅ Done      | Live member roster, role assignment, deactivate/reactivate (server fn), policy toggles (UI-only)        |
 | Role-based access                                      | ✅ Done      | Members/leads restricted to Task Board, Projects, Teams; Dashboard, Analytics and Admin are admin-only (`requireAdmin` + sidebar filtering) |
-| Admin management                                       | ✅ Done      | Admins get full Supabase control: member role change, deactivate/reactivate, permanent member removal, and project create/edit/delete |
+| Admin management                                       | ✅ Done      | Admins get full Supabase control: member role change, deactivate/reactivate, permanent member removal, project create/edit/delete, and email invitations |
 | RLS hardening                                         | ✅ Done      | `20260807170000_harden_rls.sql` — role/ownership policies, anon privileges revoked; `20260820000000_admin_full_control.sql` grants admins INSERT/DELETE on `profiles` |
 | Role management                                       | ✅ Done      | `useUpdateUserRole`, `useUpdateTeamMemberRole`, `useAddTeamMember`, `useRemoveTeamMember`               |
 | Unit tests                                            | 🟡 Partial   | 3 Vitest suites (`aggregations`, `task-ui`, `tasks-api`); no e2e                                        |
@@ -104,6 +104,12 @@ Browser ⇄ TanStack Start (SSR) ⇄ Supabase (Postgres + Auth)
 
 ## Recent changes
 
+- 2026-08-18 — Email invitations: admins can invite members by email (with a
+  chosen role) from Admin → Members. The invitee receives an email and sets
+  their own password at the new `/invite` route, then signs in. Migration
+  `20260820000001_invite_role.sql` lets the invite carry a role
+  (`supabase db push` required). The `/invite` redirect URL must be allowlisted
+  in Supabase Auth settings and SMTP must be enabled for invite emails.
 - 2026-08-18 — Admin full control: admins can now permanently remove any
   member (deletes the auth account + profile via a server function) and
   create/edit/delete projects from the Projects page. New migration
