@@ -1,4 +1,10 @@
 -- Persist the Admin -> Policies toggles (previously hard-coded, UI-only).
+
+-- Defined here (not just in the initial migration) because it's missing on
+-- some environments; CREATE OR REPLACE makes this a no-op where it exists.
+CREATE OR REPLACE FUNCTION public.set_updated_at() RETURNS TRIGGER AS $$
+BEGIN NEW.updated_at = now(); RETURN NEW; END; $$ LANGUAGE plpgsql SET search_path = public;
+
 CREATE TABLE public.workspace_policies (
   key TEXT PRIMARY KEY,
   label TEXT NOT NULL,
