@@ -17,7 +17,11 @@ npm run build     # production build
 npm run lint      # ESLint (project-configured)
 npm run format    # Prettier write
 npx tsc --noEmit  # typecheck
+npm test          # Vitest unit suites
 ```
+
+CI (`.github/workflows/ci.yml`) runs lint → typecheck → test → build on every
+push/PR.
 
 ## Conventions
 
@@ -31,6 +35,13 @@ npx tsc --noEmit  # typecheck
 - **Auth**: `src/start.ts` registers `attachSupabaseAuth` (attaches the bearer
   token to serverFn RPCs) and a CSRF middleware. `requireSupabaseAuth` in
   `src/integrations/supabase/auth-middleware.ts` protects server functions.
+  Route-level guards (`requireAuth`/`requireAdmin` in `src/lib/auth-guard.ts`)
+  only protect page navigation — a `createServerFn()` is an independently
+  reachable RPC endpoint. Any handler that uses `supabaseAdmin`
+  (`client.server.ts`, bypasses RLS) must add `.middleware([requireSupabaseAuth])`
+  *and* re-check the caller's own role from `context.userId` before doing
+  anything privileged — see `src/lib/admin-functions.ts` for the pattern.
+  This was previously missing there and was a real privilege-escalation bug.
 - **Data**: use the TanStack Query hooks in `src/lib/tasks-api.ts` rather than
   calling `supabase` directly from components.
 - **Design system**: all colors live as oklch tokens in `src/styles.css`
