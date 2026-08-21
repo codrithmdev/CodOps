@@ -209,6 +209,27 @@ export type Database = {
         };
         Relationships: [];
       };
+      workspace_policies: {
+        Row: {
+          enabled: boolean;
+          key: string;
+          label: string;
+          updated_at: string;
+        };
+        Insert: {
+          enabled?: boolean;
+          key: string;
+          label: string;
+          updated_at?: string;
+        };
+        Update: {
+          enabled?: boolean;
+          key?: string;
+          label?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       [_ in never]: never;

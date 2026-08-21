@@ -25,11 +25,14 @@ export type TeamUpdate = Database["public"]["Tables"]["teams"]["Update"];
 export type TaskStatusDb = Database["public"]["Enums"]["task_status"];
 export type TaskPriorityDb = Database["public"]["Enums"]["task_priority"];
 
+export type WorkspacePolicyRow = Database["public"]["Tables"]["workspace_policies"]["Row"];
+
 export const taskKeys = {
   tasks: ["tasks"] as const,
   projects: ["projects"] as const,
   profiles: ["profiles"] as const,
   teams: ["teams"] as const,
+  policies: ["workspace-policies"] as const,
 };
 
 export function useTasks() {
@@ -241,7 +244,12 @@ export function useSaveTask() {
         if (error) throw error;
         return "updated" as const;
       }
-      const { error } = await supabase.from("tasks").insert(values);
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      const { error } = await supabase
+        .from("tasks")
+        .insert({ ...values, created_by: user?.id ?? null });
       if (error) throw error;
       return "created" as const;
     },
@@ -517,5 +525,43 @@ export function useInviteUser() {
     },
     onError: (error) =>
       toast.error("Couldn't send invitation", { description: (error as Error).message }),
+  });
+}
+
+/** Workspace policy toggles (Admin -> Policies). Readable by everyone, editable by admins. */
+export function useWorkspacePolicies() {
+  return useQuery({
+    queryKey: taskKeys.policies,
+    queryFn: async (): Promise<WorkspacePolicyRow[]> => {
+      const { data, error } = await supabase.from("workspace_policies").select("*").order("key");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+/** Toggle a workspace policy (admin only). */
+export function useUpdateWorkspacePolicy() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ key, enabled }: { key: string; enabled: boolean }) => {
+      const { error } = await supabase
+        .from("workspace_policies")
+        .update({ enabled })
+        .eq("key", key);
+      if (error) throw error;
+    },
+    onMutate: async ({ key, enabled }) => {
+      await qc.cancelQueries({ queryKey: taskKeys.policies });
+      const previous = qc.getQueryData<WorkspacePolicyRow[]>(taskKeys.policies);
+      qc.setQueryData<WorkspacePolicyRow[]>(taskKeys.policies, (old) =>
+        (old ?? []).map((p) => (p.key === key ? { ...p, enabled } : p)),
+      );
+      return { previous };
+    },
+    onError: (error, _vars, ctx) => {
+      if (ctx?.previous) qc.setQueryData(taskKeys.policies, ctx.previous);
+      toast.error("Couldn't update policy", { description: (error as Error).message });
+    },
   });
 }

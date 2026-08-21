@@ -51,6 +51,8 @@ import {
   useReactivateUser,
   useDeleteUser,
   useInviteUser,
+  useWorkspacePolicies,
+  useUpdateWorkspacePolicy,
 } from "@/lib/tasks-api";
 import type { AppRole } from "@/lib/types";
 
@@ -73,13 +75,6 @@ export const Route = createFileRoute("/admin")({
   component: AdminPage,
 });
 
-const policies = [
-  { label: "Require lead approval on task completion", on: true },
-  { label: "Auto-archive completed projects after 30 days", on: false },
-  { label: "Publish quarterly evaluation scores to members", on: true },
-  { label: "Enforce SSO for all workspace members", on: true },
-];
-
 function AdminPage() {
   const currentUserQ = useCurrentUser();
   const profilesQ = useProfiles();
@@ -88,7 +83,10 @@ function AdminPage() {
   const reactivateUser = useReactivateUser();
   const deleteUser = useDeleteUser();
   const inviteUser = useInviteUser();
+  const policiesQ = useWorkspacePolicies();
+  const updatePolicy = useUpdateWorkspacePolicy();
   const profiles = profilesQ.data ?? [];
+  const policies = policiesQ.data ?? [];
 
   const [confirmAction, setConfirmAction] = useState<{
     type: "deactivate" | "reactivate" | "remove";
@@ -325,15 +323,27 @@ function AdminPage() {
           </div>
 
           <div className="divide-y divide-border">
-            {policies.map((p) => (
-              <label
-                key={p.label}
-                className="flex cursor-pointer items-center justify-between gap-4 px-5 py-4 transition-colors hover:bg-muted/30"
-              >
-                <span className="text-sm text-foreground">{p.label}</span>
-                <Switch defaultChecked={p.on} className="shrink-0" />
-              </label>
-            ))}
+            {policiesQ.isLoading
+              ? Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="flex items-center justify-between gap-4 px-5 py-4">
+                    <Skeleton className="h-4 w-48" />
+                    <Skeleton className="h-5 w-9 rounded-full" />
+                  </div>
+                ))
+              : policies.map((p) => (
+                  <label
+                    key={p.key}
+                    className="flex cursor-pointer items-center justify-between gap-4 px-5 py-4 transition-colors hover:bg-muted/30"
+                  >
+                    <span className="text-sm text-foreground">{p.label}</span>
+                    <Switch
+                      checked={p.enabled}
+                      disabled={updatePolicy.isPending}
+                      onCheckedChange={(enabled) => updatePolicy.mutate({ key: p.key, enabled })}
+                      className="shrink-0"
+                    />
+                  </label>
+                ))}
           </div>
         </Card>
       </div>
